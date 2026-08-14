@@ -1,0 +1,17 @@
+packages:
+  base: !include validate.yaml
+
+substitutions:
+  display_size: "720"
+  test_default_screen: scr_rooms
+  test_spacing_small: "12"
+  test_spacing_medium: "24"
+  test_touch_target: "72"
+  test_control_height: "112"
+
+esphome:
+  name: ha-deck-validate-720
+  build_path: /tmp/esphome/ha-deck-validate-720
+
+ha_deck:
+  weather_icon_size: 72

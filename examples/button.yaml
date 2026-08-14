@@ -1,0 +1,86 @@
+substitutions:
+  device_name: ha-deck-button
+
+esphome:
+  name: ${device_name}
+
+esp32:
+  board: esp32dev
+
+logger:
+api:
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [ha_deck]
+
+# Add the display, touchscreen, LVGL, font and image declarations for your board.
+# A complete runnable 480×480 SDL example is available in tests/validate.yaml.
+
+ha_deck:
+  id: deck
+  lvgl_id: main_lvgl
+  default_theme: material_dark
+  default_screen: scr_main
+
+  themes:
+    - id: material_dark
+      base: dark
+    - id: material_light
+      base: light
+
+  screens:
+    - id: scr_main
+      widgets:
+        - button:
+            id: open_rooms
+            x: 24
+            y: 24
+            width: 208
+            height: 72
+            text: Rooms
+            variant: filled
+            visible: !lambda return true;
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_rooms
+                  animation: move_left
+                  time: 220ms
+
+        - button:
+            id: toggle_example
+            x: 248
+            y: 24
+            width: 208
+            height: 72
+            text: Light
+            toggle: true
+            accent: light
+            checked: !lambda return id(living_room_light).state;
+            on_turn_on:
+              - homeassistant.service:
+                  service: light.turn_on
+                  data:
+                    entity_id: light.living_room
+            on_turn_off:
+              - homeassistant.service:
+                  service: light.turn_off
+                  data:
+                    entity_id: light.living_room
+
+    - id: scr_rooms
+      widgets:
+        - button:
+            id: go_back
+            x: 24
+            y: 24
+            width: 160
+            height: 72
+            text: Back
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_main
+                  animation: move_right
+                  time: 220ms

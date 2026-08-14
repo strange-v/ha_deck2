@@ -1,0 +1,163 @@
+﻿esphome:
+  name: ha-deck-esp32-validate
+  build_path: /tmp/esphome/ha-deck-esp32-validate
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [ha_deck]
+
+spi:
+  clk_pin: 18
+  mosi_pin: 23
+
+display:
+  - platform: ili9xxx
+    id: test_display
+    model: ILI9341
+    cs_pin: 5
+    dc_pin: 16
+    reset_pin: 17
+    invert_colors: false
+    auto_clear_enabled: false
+    update_interval: never
+
+image:
+  - file: icon.svg
+    id: test_icon
+    type: RGB
+    transparency: alpha_channel
+    resize: 24x24
+
+font:
+  - file: test.bdf
+    id: test_font
+    size: 8
+    glyphs: [" ", "T"]
+
+lvgl:
+  id: test_lvgl
+  displays: test_display
+  widgets: []
+
+ha_deck:
+  id: deck
+  lvgl_id: test_lvgl
+  default_screen: scr_main
+  default_theme: material_dark
+
+  themes:
+    - id: material_dark
+      base: dark
+      fonts:
+        text_small: test_font
+        text_medium: test_font
+        text_large: test_font
+        icon_small: test_font
+        icon_medium: test_font
+      accents:
+        - name: fan
+          color: 0x2196F3
+          on_color: 0x001D36
+    - id: material_light
+      base: light
+      fonts:
+        text_small: test_font
+        text_medium: test_font
+        text_large: test_font
+        icon_small: test_font
+        icon_medium: test_font
+
+  screens:
+    - id: scr_main
+      widgets:
+        - button:
+            id: test_button
+            x: 10
+            y: 10
+            width: 140
+            height: 60
+            text: T
+            font: test_font
+            variant: filled
+            disabled: !lambda return false;
+            visible: !lambda return true;
+            on_click:
+              - ha_deck.screen.show: scr_second
+        - button:
+            id: test_icon_button
+            x: 170
+            y: 10
+            width: 60
+            height: 60
+            icon: test_icon
+            accent_icon: true
+            toggle: true
+            accent: fan
+            checked: !lambda return false;
+            on_turn_on:
+              - logger.log: toggle-on
+            on_turn_off:
+              - logger.log: toggle-off
+            on_click:
+              - ha_deck.theme.set: material_light
+        - sensor_value:
+            id: test_sensor_value
+            x: 10
+            y: 90
+            width: 100
+            height: 50
+            value: !lambda return 21.5f;
+            units: "C"
+            text_font: test_font
+            value_font: test_font
+            visible: !lambda return true;
+        - weather:
+            id: test_weather
+            x: 120
+            y: 90
+            width: 100
+            height: 50
+            temperature: !lambda return 12.0f;
+            condition: !lambda return std::string("partlycloudy");
+            is_night: false
+            units: "C"
+            text_font: test_font
+            value_font: test_font
+        - slider:
+            id: test_slider
+            x: 230
+            y: 90
+            width: 60
+            height: 140
+            value: 50
+            format: "%.0f%%"
+            label: T
+            font: test_font
+            accent: fan
+            on_release:
+              - lambda: |-
+                  ESP_LOGI("ha_deck", "Slider: %.0f", x);
+
+    - id: scr_second
+      background_color: 0x102030
+      background_image: test_icon
+      widgets:
+        - button:
+            id: test_back_button
+            x: 10
+            y: 10
+            width: 140
+            height: 60
+            text: Back
+            on_click:
+              - lambda: id(deck).switch_screen("scr_main");
+

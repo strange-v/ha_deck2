@@ -1,0 +1,650 @@
+esphome:
+  name: ha-deck-dashboard
+  build_path: /tmp/esphome/ha-deck-dashboard
+
+substitutions:
+  # Override these in one place if Home Assistant generated different entity IDs.
+  room_temperature_entity: sensor.esp32_4848s040_t1_temperature
+  room_humidity_entity: sensor.esp32_4848s040_t1_humidity
+  room_co2_entity: sensor.esp32_4848s040_t1_co2
+  outside_temperature_entity: sensor.outside_temperature
+  weather_entity: weather.home
+  sun_entity: sun.sun
+  blinds_entity: cover.living_room_blinds
+  left_light_entity: light.living_room_lights_led_a
+  right_light_entity: light.living_room_lights_led_b
+  heating_entity: climate.heating_controller_living_room_thermostat
+  ac_entity: climate.living_room
+
+host:
+
+logger:
+
+api:
+  port: 6060
+  encryption:
+    key: !env_var ESPHOME_API_ENCRYPTION_KEY
+  reboot_timeout: 0s
+
+sensor:
+  - platform: homeassistant
+    id: ha_room_temperature
+    entity_id: ${room_temperature_entity}
+  - platform: homeassistant
+    id: ha_room_humidity
+    entity_id: ${room_humidity_entity}
+  - platform: homeassistant
+    id: ha_room_co2
+    entity_id: ${room_co2_entity}
+  - platform: homeassistant
+    id: ha_outside_temperature
+    entity_id: ${outside_temperature_entity}
+  - platform: homeassistant
+    id: ha_blinds_position
+    entity_id: ${blinds_entity}
+    attribute: current_position
+  - platform: homeassistant
+    id: ha_left_brightness
+    entity_id: ${left_light_entity}
+    attribute: brightness
+  - platform: homeassistant
+    id: ha_right_brightness
+    entity_id: ${right_light_entity}
+    attribute: brightness
+  - platform: homeassistant
+    id: ha_heating_current_temperature
+    entity_id: ${heating_entity}
+    attribute: current_temperature
+  - platform: homeassistant
+    id: ha_heating_target_temperature
+    entity_id: ${heating_entity}
+    attribute: temperature
+  - platform: homeassistant
+    id: ha_ac_current_temperature
+    entity_id: ${ac_entity}
+    attribute: current_temperature
+  - platform: homeassistant
+    id: ha_ac_target_temperature
+    entity_id: ${ac_entity}
+    attribute: temperature
+
+text_sensor:
+  - platform: homeassistant
+    id: ha_weather_condition
+    entity_id: ${weather_entity}
+  - platform: homeassistant
+    id: ha_sun_state
+    entity_id: ${sun_entity}
+  - platform: homeassistant
+    id: ha_blinds_state
+    entity_id: ${blinds_entity}
+  - platform: homeassistant
+    id: ha_left_light_state
+    entity_id: ${left_light_entity}
+  - platform: homeassistant
+    id: ha_right_light_state
+    entity_id: ${right_light_entity}
+  - platform: homeassistant
+    id: ha_heating_mode
+    entity_id: ${heating_entity}
+  - platform: homeassistant
+    id: ha_heating_preset
+    entity_id: ${heating_entity}
+    attribute: preset_mode
+  - platform: homeassistant
+    id: ha_ac_mode
+    entity_id: ${ac_entity}
+  - platform: homeassistant
+    id: ha_ac_fan_mode
+    entity_id: ${ac_entity}
+    attribute: fan_mode
+  - platform: homeassistant
+    id: ha_ac_swing_mode
+    entity_id: ${ac_entity}
+    attribute: swing_mode
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [ha_deck]
+
+display:
+  - platform: sdl
+    id: dashboard_display
+    dimensions: 480x480
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: sdl
+    id: dashboard_touch
+    sdl_id: dashboard_display
+
+lvgl:
+  id: dashboard_lvgl
+  displays: dashboard_display
+  touchscreens:
+    - touchscreen_id: dashboard_touch
+  widgets: []
+
+font:
+  - file: assets/Roboto-Regular.ttf
+    id: dashboard_text_16
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core, GF_Cyrillic_Core]
+    ignore_missing_glyphs: true
+
+  - file: assets/Roboto-Regular.ttf
+    id: dashboard_value_48
+    size: 48
+    bpp: 4
+    glyphs: "0123456789-−+.,:%° "
+
+  - file: assets/Roboto-Regular.ttf
+    id: dashboard_value_72
+    size: 72
+    bpp: 4
+    glyphs: "0123456789-−+.,:%°C "
+
+  - file: assets/materialdesignicons-webfont.ttf
+    id: dashboard_icons_28
+    size: 28
+    bpp: 4
+    glyphs:
+      - "\U000F004D" # arrow-left
+      - "\U000F0156" # close
+      - "\U000F01D9" # dots-horizontal
+      - "\U000F0210" # fan
+      - "\U000F0238" # fire
+      - "\U000F058E" # water-percent
+      - "\U000F0717" # snowflake
+
+  - file: assets/materialdesignicons-webfont.ttf
+    id: dashboard_icons_48
+    size: 48
+    bpp: 4
+    glyphs:
+      - "\U000F005E" # arrow-up-thick
+      - "\U000F0046" # arrow-down-thick
+      - "\U000F02D1" # heart
+      - "\U000F04DB" # stop
+      - "\U000F050F" # thermometer
+      - "\U000F058E" # water-percent
+      - "\U000F07E4" # molecule-co2
+      - "\U000F1352" # hvac
+      - "\U000F1AAF" # heating-coil
+      - "\U000F04B9" # sofa
+      - "\U000F02E3" # bed
+      - "\U000F0425" # power
+      - "\U000F0210" # fan
+      - "\U000F0238" # fire
+      - "\U000F0717" # snowflake
+
+image:
+  - file: assets/480x480_trees.jpg
+    id: dashboard_background
+    type: RGB565
+    resize: 480x480
+
+ha_deck:
+  id: deck
+  lvgl_id: dashboard_lvgl
+  update_interval: 100ms
+  default_theme: glass
+  default_screen: scr_main
+  weather_icon_directory: !env_var HA_DECK_WEATHER_ICONS_DIR ../components/ha_deck/assets/weather
+
+  themes:
+    - id: glass
+      # base: light
+      fonts:
+        text_small: dashboard_text_16
+        text_medium: dashboard_value_48
+        text_large: dashboard_value_72
+        icon_small: dashboard_icons_28
+        icon_medium: dashboard_icons_48
+
+  screens:
+    - id: scr_main
+      background_image: dashboard_background
+      widgets:
+        - weather:
+            id: outside_weather
+            x: 132
+            y: 8
+            width: 216
+            height: 64
+            temperature: !lambda return id(ha_outside_temperature).state;
+            condition: !lambda |-
+              return id(ha_weather_condition).has_state()
+                  ? id(ha_weather_condition).state
+                  : std::string("exceptional");
+            is_night: !lambda |-
+              return id(ha_sun_state).has_state() && id(ha_sun_state).state == "below_horizon";
+            format: "%.1f"
+            units: "°C"
+
+        - button:
+            id: button_up
+            x: 8
+            y: 80
+            width: 64
+            height: 64
+            icon:
+              glyph: "\U000F005E"
+            disabled: !lambda |-
+              return !id(ha_blinds_state).has_state() || !id(ha_blinds_position).has_state() ||
+                     id(ha_blinds_state).state == "opening" || id(ha_blinds_state).state == "closing" ||
+                     id(ha_blinds_position).state >= 100.0f;
+            on_click:
+              - homeassistant.service:
+                  service: cover.open_cover
+                  data:
+                    entity_id: ${blinds_entity}
+
+        - button:
+            id: button_favorite
+            x: 8
+            y: 175
+            width: 64
+            height: 64
+            icon:
+              glyph: "\U000F02D1"
+            visible: !lambda |-
+              return !id(ha_blinds_state).has_state() ||
+                     (id(ha_blinds_state).state != "opening" && id(ha_blinds_state).state != "closing");
+            on_click:
+              - homeassistant.service:
+                  service: cover.set_cover_position
+                  data:
+                    entity_id: ${blinds_entity}
+                    position: "50"
+
+        - button:
+            id: button_stop
+            x: 8
+            y: 175
+            width: 64
+            height: 64
+            icon:
+              glyph: "\U000F04DB"
+            visible: !lambda |-
+              return id(ha_blinds_state).has_state() &&
+                     (id(ha_blinds_state).state == "opening" || id(ha_blinds_state).state == "closing");
+            on_click:
+              - homeassistant.service:
+                  service: cover.stop_cover
+                  data:
+                    entity_id: ${blinds_entity}
+
+        - button:
+            id: button_down
+            x: 8
+            y: 271
+            width: 64
+            height: 64
+            icon:
+              glyph: "\U000F0046"
+            disabled: !lambda |-
+              return !id(ha_blinds_state).has_state() || !id(ha_blinds_position).has_state() ||
+                     id(ha_blinds_state).state == "opening" || id(ha_blinds_state).state == "closing" ||
+                     id(ha_blinds_position).state <= 0.0f;
+            on_click:
+              - homeassistant.service:
+                  service: cover.close_cover
+                  data:
+                    entity_id: ${blinds_entity}
+
+        - sensor_value:
+            id: sensor_temperature
+            x: 111
+            y: 120
+            width: 200
+            height: 64
+            icon:
+              glyph: "\U000F050F"
+            value: !lambda return id(ha_room_temperature).state;
+            format: "%.1f"
+            units: "°C"
+            accent: neutral
+
+        - sensor_value:
+            id: sensor_humidity
+            x: 111
+            y: 183
+            width: 200
+            height: 64
+            icon:
+              glyph: "\U000F058E"
+            value: !lambda return id(ha_room_humidity).state;
+            format: "%.0f"
+            units: "%"
+            accent: neutral
+
+        - sensor_value:
+            id: sensor_co2
+            x: 111
+            y: 247
+            width: 200
+            height: 64
+            icon:
+              glyph: "\U000F07E4"
+            value: !lambda return id(ha_room_co2).state;
+            format: "%.0f"
+            units: ppm
+            accent: neutral
+
+        - slider:
+            id: led_left
+            x: 336
+            y: 80
+            width: 64
+            height: 392
+            value: !lambda |-
+              if (!id(ha_left_light_state).has_state() || id(ha_left_light_state).state != "on" ||
+                  !id(ha_left_brightness).has_state()) return 0.0f;
+              return id(ha_left_brightness).state * 100.0f / 255.0f;
+            disabled: !lambda return !id(ha_left_light_state).has_state();
+            label: Ліва
+            accent: light
+            on_release:
+              - homeassistant.service:
+                  service: light.turn_on
+                  data:
+                    entity_id: ${left_light_entity}
+                    brightness_pct: !lambda return x;
+            on_click:
+              - homeassistant.service:
+                  service: light.toggle
+                  data:
+                    entity_id: ${left_light_entity}
+
+        - slider:
+            id: led_right
+            x: 408
+            y: 80
+            width: 64
+            height: 392
+            value: !lambda |-
+              if (!id(ha_right_light_state).has_state() || id(ha_right_light_state).state != "on" ||
+                  !id(ha_right_brightness).has_state()) return 0.0f;
+              return id(ha_right_brightness).state * 100.0f / 255.0f;
+            disabled: !lambda return !id(ha_right_light_state).has_state();
+            label: Права
+            accent: light
+            on_release:
+              - homeassistant.service:
+                  service: light.turn_on
+                  data:
+                    entity_id: ${right_light_entity}
+                    brightness_pct: !lambda return x;
+            on_click:
+              - homeassistant.service:
+                  service: light.toggle
+                  data:
+                    entity_id: ${right_light_entity}
+
+        - button:
+            id: button_heating
+            x: 8
+            y: 376
+            width: 110
+            height: 96
+            icon:
+              glyph: "\U000F1AAF" # heating-coil
+            text: Опалення
+            accent: heat
+            checked: !lambda |-
+              return id(ha_heating_mode).has_state() && id(ha_heating_mode).state != "off";
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_heating
+                  animation: move_left
+                  time: 220ms
+
+        - button:
+            id: button_ac
+            x: 126
+            y: 376
+            width: 110
+            height: 96
+            icon:
+              glyph: "\U000F1352" # hvac
+            text: Кондиціонер
+            accent: !lambda |-
+              if (id(ha_ac_mode).has_state()) {
+                if (id(ha_ac_mode).state == "heat") return std::string("heat");
+                if (id(ha_ac_mode).state == "dry") return std::string("dry");
+              }
+              return std::string("climate");
+            checked: !lambda |-
+              return id(ha_ac_mode).has_state() && id(ha_ac_mode).state != "off";
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_ac
+                  animation: move_left
+                  time: 220ms
+
+    - id: scr_heating
+      background_image: dashboard_background
+      widgets:
+        - climate:
+            id: heating_climate
+            x: 0
+            y: 0
+            width: 480
+            height: 480
+            current_temperature: !lambda return id(ha_heating_current_temperature).state;
+            target_temperature: !lambda return id(ha_heating_target_temperature).state;
+            min_value: 10
+            max_value: 30
+            step: 0.5
+            units: "°C"
+            accent: climate
+            heating_accent: heat
+            drying_accent: dry
+            arc_mode: heating
+            on_target_change:
+              - homeassistant.service:
+                  service: climate.set_temperature
+                  data:
+                    entity_id: ${heating_entity}
+                    temperature: !lambda return x;
+            power:
+              state: !lambda |-
+                return id(ha_heating_mode).has_state() && id(ha_heating_mode).state != "off";
+              on_turn_on:
+                - homeassistant.service:
+                    service: climate.set_hvac_mode
+                    data:
+                      entity_id: ${heating_entity}
+                      hvac_mode: heat
+              on_turn_off:
+                - homeassistant.service:
+                    service: climate.set_hvac_mode
+                    data:
+                      entity_id: ${heating_entity}
+                      hvac_mode: "off"
+            primary_controls:
+              - label: Комфорт
+                icon:
+                  glyph: "\U000F04B9" # sofa
+                active: !lambda |-
+                  return id(ha_heating_preset).has_state() && id(ha_heating_preset).state == "comfort";
+                accent: heat
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_preset_mode
+                      data:
+                        entity_id: ${heating_entity}
+                        preset_mode: comfort
+              - label: Ніч
+                icon:
+                  glyph: "\U000F02E3" # bed
+                active: !lambda |-
+                  return id(ha_heating_preset).has_state() && id(ha_heating_preset).state == "sleep";
+                accent: heat
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_preset_mode
+                      data:
+                        entity_id: ${heating_entity}
+                        preset_mode: sleep
+              - label: Підлога
+                icon:
+                  glyph: "\U000F1AAF" # heating-coil
+                active: !lambda |-
+                  return id(ha_heating_preset).has_state() && id(ha_heating_preset).state == "Floor";
+                accent: heat
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_preset_mode
+                      data:
+                        entity_id: ${heating_entity}
+                        preset_mode: Floor
+
+        - navigation_button:
+            id: heating_back
+            align: top_left
+            back: true
+
+    - id: scr_ac
+      background_image: dashboard_background
+      widgets:
+        - climate:
+            id: ac_climate
+            x: 0
+            y: 0
+            width: 480
+            height: 480
+            current_temperature: !lambda return id(ha_ac_current_temperature).state;
+            target_temperature: !lambda return id(ha_ac_target_temperature).state;
+            min_value: 16
+            max_value: 30
+            step: 1
+            units: "°C"
+            accent: climate
+            heating_accent: heat
+            drying_accent: dry
+            arc_mode: !lambda |-
+              if (id(ha_ac_mode).has_state()) {
+                if (id(ha_ac_mode).state == "heat") return std::string("heating");
+                if (id(ha_ac_mode).state == "dry") return std::string("drying");
+              }
+              return std::string("cooling");
+            on_target_change:
+              - homeassistant.service:
+                  service: climate.set_temperature
+                  data:
+                    entity_id: ${ac_entity}
+                    temperature: !lambda return x;
+            power:
+              state: !lambda return id(ha_ac_mode).has_state() && id(ha_ac_mode).state != "off";
+              on_turn_on:
+                - homeassistant.service:
+                    service: climate.set_hvac_mode
+                    data:
+                      entity_id: ${ac_entity}
+                      hvac_mode: cool
+              on_turn_off:
+                - homeassistant.service:
+                    service: climate.set_hvac_mode
+                    data:
+                      entity_id: ${ac_entity}
+                      hvac_mode: "off"
+            primary_controls:
+              - label: Охолодження
+                icon:
+                  glyph: "\U000F0717"
+                active: !lambda return id(ha_ac_mode).has_state() && id(ha_ac_mode).state == "cool";
+                accent: climate
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_hvac_mode
+                      data:
+                        entity_id: ${ac_entity}
+                        hvac_mode: cool
+              - label: Нагрівання
+                icon:
+                  glyph: "\U000F0238"
+                active: !lambda return id(ha_ac_mode).has_state() && id(ha_ac_mode).state == "heat";
+                accent: heat
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_hvac_mode
+                      data:
+                        entity_id: ${ac_entity}
+                        hvac_mode: heat
+              - label: Осушення
+                icon:
+                  glyph: "\U000F058E"
+                active: !lambda return id(ha_ac_mode).has_state() && id(ha_ac_mode).state == "dry";
+                accent: dry
+                on_select:
+                  - homeassistant.service:
+                      service: climate.set_hvac_mode
+                      data:
+                        entity_id: ${ac_entity}
+                        hvac_mode: dry
+            additional_controls:
+              - label: Вентилятор
+                options:
+                  - label: Auto
+                    active: !lambda |-
+                      return id(ha_ac_fan_mode).has_state() && id(ha_ac_fan_mode).state == "auto";
+                    accent: climate
+                    on_select:
+                      - homeassistant.service:
+                          service: climate.set_fan_mode
+                          data:
+                            entity_id: ${ac_entity}
+                            fan_mode: auto
+                  - label: Low
+                    active: !lambda |-
+                      return id(ha_ac_fan_mode).has_state() && id(ha_ac_fan_mode).state == "low";
+                    accent: climate
+                    on_select:
+                      - homeassistant.service:
+                          service: climate.set_fan_mode
+                          data:
+                            entity_id: ${ac_entity}
+                            fan_mode: low
+                  - label: High
+                    active: !lambda |-
+                      return id(ha_ac_fan_mode).has_state() && id(ha_ac_fan_mode).state == "high";
+                    accent: climate
+                    on_select:
+                      - homeassistant.service:
+                          service: climate.set_fan_mode
+                          data:
+                            entity_id: ${ac_entity}
+                            fan_mode: high
+              - label: Коливання
+                options:
+                  - label: "Off"
+                    active: !lambda |-
+                      return id(ha_ac_swing_mode).has_state() && id(ha_ac_swing_mode).state == "off";
+                    accent: climate
+                    on_select:
+                      - homeassistant.service:
+                          service: climate.set_swing_mode
+                          data:
+                            entity_id: ${ac_entity}
+                            swing_mode: "off"
+                  - label: Vertical
+                    active: !lambda |-
+                      return id(ha_ac_swing_mode).has_state() && id(ha_ac_swing_mode).state == "vertical";
+                    accent: climate
+                    on_select:
+                      - homeassistant.service:
+                          service: climate.set_swing_mode
+                          data:
+                            entity_id: ${ac_entity}
+                            swing_mode: vertical
+
+        - navigation_button:
+            id: ac_back
+            align: top_left
+            back: true

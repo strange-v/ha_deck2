@@ -1,0 +1,301 @@
+﻿esphome:
+  name: ha-deck-validate
+  build_path: /tmp/esphome/ha-deck-validate
+
+substitutions:
+  display_size: "480"
+  test_default_screen: scr_main
+  test_spacing_small: "8"
+  test_spacing_medium: "16"
+  test_touch_target: "56"
+  test_control_height: "88"
+
+host:
+
+logger:
+
+globals:
+  - id: test_toggle_state
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+image:
+  - file: icon.svg
+    id: test_icon
+    type: RGB
+    transparency: alpha_channel
+    resize: 28x28
+
+font:
+  - file: test.bdf
+    id: test_font
+    size: 8
+    glyphs: [" ", "T"]
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [ha_deck]
+
+display:
+  - platform: sdl
+    id: test_display
+    dimensions: ${display_size}x${display_size}
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: sdl
+    id: test_touchscreen
+    sdl_id: test_display
+
+lvgl:
+  id: test_lvgl
+  displays: test_display
+  touchscreens:
+    - touchscreen_id: test_touchscreen
+  widgets: []
+
+ha_deck:
+  id: deck
+  lvgl_id: test_lvgl
+  default_screen: ${test_default_screen}
+  default_theme: material_dark
+
+  themes:
+    - id: material_dark
+      base: dark
+      fonts:
+        text_small: test_font
+        text_medium: test_font
+        text_large: test_font
+        icon_small: test_font
+        icon_medium: test_font
+      metrics:
+        spacing_small: ${test_spacing_small}
+        spacing_medium: ${test_spacing_medium}
+        touch_target: ${test_touch_target}
+        control_height: ${test_control_height}
+      accents:
+        - name: fan
+          color: 0x2196F3
+          on_color: 0x001D36
+    - id: material_light
+      base: light
+      fonts:
+        text_small: test_font
+        text_medium: test_font
+        text_large: test_font
+        icon_small: test_font
+        icon_medium: test_font
+      accents:
+        - name: fan
+          color: 0x2196F3
+          on_color: 0x001D36
+
+  screens:
+    - id: scr_main
+      widgets:
+        - button:
+            id: btn_open_rooms
+            x: 24
+            y: 24
+            width: 208
+            height: 72
+            text: Rooms
+            variant: filled
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_rooms
+                  animation: move_left
+                  time: 220ms
+
+        - button:
+            id: btn_light_theme
+            x: 248
+            y: 24
+            width: 208
+            height: 72
+            text: Light theme
+            accent_icon: true
+            on_click:
+              - ha_deck.theme.set: material_light
+
+        - button:
+            id: btn_disabled
+            x: 24
+            y: 112
+            width: 208
+            height: 72
+            text: Disabled
+            disabled: true
+            visible: !lambda return true;
+
+        - button:
+            id: btn_icon
+            x: 248
+            y: 112
+            width: 72
+            height: 72
+            icon: test_icon
+            text: T
+            font: test_font
+            on_click:
+              - logger.log: icon-clicked
+            on_long_press:
+              - logger.log: icon-long-pressed
+
+        - button:
+            id: btn_custom_font
+            x: 336
+            y: 112
+            width: 120
+            height: 72
+            text: T
+            font: test_font
+            icon:
+              glyph: T
+            accent: !lambda return std::string("heat");
+            checked: !lambda return true;
+            accent_icon: !lambda return true;
+
+        - button:
+            id: btn_toggle
+            x: 24
+            y: 200
+            width: 208
+            height: 72
+            text: Toggle
+            toggle: true
+            accent: light
+            checked: !lambda return id(test_toggle_state);
+            on_turn_on:
+              - lambda: id(test_toggle_state) = true;
+              - logger.log: toggle-turned-on
+            on_turn_off:
+              - lambda: id(test_toggle_state) = false;
+              - logger.log: toggle-turned-off
+
+        - sensor_value:
+            id: test_sensor_value
+            x: 248
+            y: 200
+            width: 208
+            height: 64
+            value: !lambda return 23.4f;
+            format: "%.1f"
+            units: "C"
+            icon:
+              glyph: T
+              font: test_font
+            value_font: test_font
+            text_font: test_font
+
+        - weather:
+            id: test_weather
+            x: 24
+            y: 280
+            width: 208
+            height: 64
+            temperature: !lambda return 12.3f;
+            condition: !lambda return std::string("sunny");
+            is_night: !lambda return false;
+            units: "C"
+            value_font: test_font
+            text_font: test_font
+
+        - slider:
+            id: test_slider
+            x: 248
+            y: 280
+            width: 64
+            height: 176
+            value: !lambda return 42.0f;
+            format: "%.0f pct"
+            icon:
+              glyph: T
+            action_height: 56
+            accent: light
+            optimistic: true
+            optimistic_timeout: 1500ms
+            on_value:
+              - lambda: ESP_LOGD("slider", "value %.0f", x);
+            on_release:
+              - lambda: ESP_LOGD("slider", "released %.0f", x);
+            on_click:
+              - logger.log: slider-button
+
+    - id: scr_rooms
+      background_color: 0x102030
+      background_image: test_icon
+      widgets:
+        - navigation_button:
+            id: btn_back
+            align: top_left
+            back: true
+            glyph: T
+
+        - climate:
+            id: test_climate
+            x: 0
+            y: 0
+            width: ${display_size}
+            height: ${display_size}
+            current_temperature: !lambda return 21.5f;
+            target_temperature: !lambda return 22.0f;
+            min_value: 10
+            max_value: 30
+            step: 0.5
+            units: C
+            accent: fan
+            heating_accent: heat
+            drying_accent: dry
+            arc_mode: !lambda return std::string("drying");
+            menu_icon: T
+            close_icon: T
+            on_target_change:
+              - lambda: ESP_LOGD("climate", "target %.1f", x);
+            power:
+              state: !lambda return true;
+              icon: T
+              accent: fan
+              on_turn_on:
+                - logger.log: climate-on
+              on_turn_off:
+                - logger.log: climate-off
+            primary_controls:
+              - label: T
+                icon:
+                  glyph: T
+                active: true
+                accent: fan
+                on_select:
+                  - logger.log: climate-primary-1
+              - label: T
+                active: false
+                on_select:
+                  - logger.log: climate-primary-2
+            additional_controls:
+              - label: T
+                options:
+                  - label: T
+                    active: true
+                    on_select:
+                      - logger.log: climate-extra-1
+                  - label: T
+                    active: false
+                    on_select:
+                      - logger.log: climate-extra-2
+
+        - button:
+            id: btn_dark_theme
+            x: 200
+            y: 24
+            width: 208
+            height: 72
+            text: Dark theme
+            on_click:
+              - ha_deck.theme.set: material_dark
+

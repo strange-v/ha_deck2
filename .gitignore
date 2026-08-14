@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+secrets.yaml
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Local tools and scratch files
+.codex/
+.idea/
+.vscode/
+temp/
+*.bak
+.DS_Store
+Thumbs.db
+
+# ESPHome-generated build state
+.esphome/

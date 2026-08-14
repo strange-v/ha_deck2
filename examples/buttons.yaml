@@ -1,0 +1,318 @@
+esphome:
+  name: ha-deck-buttons
+  build_path: /tmp/esphome/ha-deck-buttons
+
+host:
+
+logger:
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [ha_deck]
+
+display:
+  - platform: sdl
+    id: buttons_display
+    dimensions: 680x480
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: sdl
+    id: buttons_touch
+    sdl_id: buttons_display
+
+lvgl:
+  id: buttons_lvgl
+  displays: buttons_display
+  touchscreens:
+    - touchscreen_id: buttons_touch
+  widgets: []
+
+font:
+  - file: assets/Roboto-Regular.ttf
+    id: buttons_text
+    size: 16
+    bpp: 4
+    glyphsets: [GF_Latin_Core]
+    ignore_missing_glyphs: true
+  - file: assets/materialdesignicons-webfont.ttf
+    id: buttons_icons
+    size: 32
+    bpp: 4
+    glyphs: ["\U000F0425"]
+
+ha_deck:
+  id: deck
+  lvgl_id: buttons_lvgl
+  default_screen: scr_buttons
+  default_theme: buttons_dark
+
+  themes:
+    - id: buttons_dark
+      base: dark
+      background_color: 0x101215
+      on_surface_color: 0xFFFFFF
+      fonts:
+        text_small: buttons_text
+        text_medium: buttons_text
+        text_large: buttons_text
+        icon_small: buttons_icons
+        icon_medium: buttons_icons
+      radius: 5
+
+  screens:
+    - id: scr_buttons
+      background_color: 0x101215
+      widgets:
+        # Columns: default, disabled, checked, filled, accent_icon,
+        # checked + accent_icon.
+        # Cooling / blue
+        - button:
+            id: cool_default
+            x: 8
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Default
+            accent: climate
+        - button:
+            id: cool_disabled
+            x: 120
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Disabled
+            accent: climate
+            disabled: true
+        - button:
+            id: cool_checked
+            x: 232
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked
+            accent: climate
+            checked: true
+        - button:
+            id: cool_filled
+            x: 344
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Filled
+            accent: climate
+            variant: filled
+        - button:
+            id: cool_accent_icon
+            x: 456
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Accent icon
+            accent: climate
+            accent_icon: true
+        - button:
+            id: cool_checked_accent_icon
+            x: 568
+            y: 8
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked accent
+            accent: climate
+            checked: true
+            accent_icon: true
+
+        # Heating / orange
+        - button:
+            id: heat_default
+            x: 8
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Default
+            accent: heat
+        - button:
+            id: heat_disabled
+            x: 120
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Disabled
+            accent: heat
+            disabled: true
+        - button:
+            id: heat_checked
+            x: 232
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked
+            accent: heat
+            checked: true
+        - button:
+            id: heat_filled
+            x: 344
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Filled
+            accent: heat
+            variant: filled
+        - button:
+            id: heat_accent_icon
+            x: 456
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Accent icon
+            accent: heat
+            accent_icon: true
+        - button:
+            id: heat_checked_accent_icon
+            x: 568
+            y: 128
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked accent
+            accent: heat
+            checked: true
+            accent_icon: true
+
+        # Light / gold
+        - button:
+            id: light_default
+            x: 8
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Default
+            accent: light
+        - button:
+            id: light_disabled
+            x: 120
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Disabled
+            accent: light
+            disabled: true
+        - button:
+            id: light_checked
+            x: 232
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked
+            accent: light
+            checked: true
+        - button:
+            id: light_filled
+            x: 344
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Filled
+            accent: light
+            variant: filled
+        - button:
+            id: light_accent_icon
+            x: 456
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Accent icon
+            accent: light
+            accent_icon: true
+        - button:
+            id: light_checked_accent_icon
+            x: 568
+            y: 248
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked accent
+            accent: light
+            checked: true
+            accent_icon: true
+
+        # Drying / teal
+        - button:
+            id: dry_default
+            x: 8
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Default
+            accent: dry
+        - button:
+            id: dry_disabled
+            x: 120
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Disabled
+            accent: dry
+            disabled: true
+        - button:
+            id: dry_checked
+            x: 232
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked
+            accent: dry
+            checked: true
+        - button:
+            id: dry_filled
+            x: 344
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Filled
+            accent: dry
+            variant: filled
+        - button:
+            id: dry_accent_icon
+            x: 456
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Accent icon
+            accent: dry
+            accent_icon: true
+        - button:
+            id: dry_checked_accent_icon
+            x: 568
+            y: 368
+            width: 104
+            height: 104
+            icon: {glyph: "\U000F0425"}
+            text: Checked accent
+            accent: dry
+            checked: true
+            accent_icon: true
