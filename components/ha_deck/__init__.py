@@ -4,12 +4,16 @@ from pathlib import Path
 from esphome import automation
 import esphome.codegen as cg
 from esphome.components import font, image, lvgl
+try:
+    from esphome.components.file import image as file_image
+except ImportError:
+    file_image = None
 from esphome.components.lvgl.defines import (
     CONF_LVGL_ID, add_lv_use, get_esphome_fonts_used, get_lv_images_used,
 )
 import esphome.config_validation as cv
 from esphome.const import (
-    CONF_DISABLED, CONF_FILE, CONF_HEIGHT, CONF_ID, CONF_MAX_VALUE, CONF_MIN_VALUE,
+    CONF_DISABLED, CONF_DITHER, CONF_FILE, CONF_HEIGHT, CONF_ID, CONF_MAX_VALUE, CONF_MIN_VALUE,
     CONF_ON_CLICK, CONF_ON_PRESS, CONF_ON_RELEASE, CONF_ON_TURN_OFF, CONF_ON_TURN_ON,
     CONF_RAW_DATA_ID, CONF_RESIZE, CONF_SIZE, CONF_TEXT, CONF_TIME, CONF_TYPE, CONF_VALUE,
     CONF_VALUE_FONT, CONF_VISIBLE, CONF_WIDTH, CONF_X, CONF_Y,
@@ -925,14 +929,20 @@ async def _generate_weather_images(icon_size, asset_dir):
             CONF_RESIZE: f"{icon_size}x{icon_size}",
             CONF_TYPE: "RGB565",
             image.CONF_TRANSPARENCY: image.CONF_ALPHA_CHANNEL,
-            image.CONF_DITHER: "NONE",
+            CONF_DITHER: "NONE",
             image.CONF_INVERT_ALPHA: False,
             image.CONF_BYTE_ORDER: "LITTLE_ENDIAN",
         })
         result[condition] = image_id
-    entries = image.CONFIG_SCHEMA(entries)
-    entries = image.FINAL_VALIDATE_SCHEMA(entries)
-    await image.to_code(entries)
+    if file_image is None:
+        entries = image.CONFIG_SCHEMA(entries)
+        entries = image.FINAL_VALIDATE_SCHEMA(entries)
+        await image.to_code(entries)
+    else:
+        for entry in entries:
+            entry = file_image.CONFIG_SCHEMA(entry)
+            entry = file_image.FINAL_VALIDATE_SCHEMA(entry)
+            await file_image.to_code(entry)
     return result
 
 
