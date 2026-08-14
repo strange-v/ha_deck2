@@ -6,15 +6,21 @@ import esphome.config_validation as cv
 
 from components.ha_deck import (
     CONF_ACTION_HEIGHT,
+    CONF_ACCENT,
+    CONF_CURRENT_TEMPERATURE,
+    CONF_DRYING_ACCENT,
     CONF_FORMAT,
     CONF_FONTS,
     CONF_HEIGHT,
+    CONF_HEATING_ACCENT,
     CONF_ICON_MEDIUM,
     CONF_ID,
     CONF_LABEL,
     CONF_MAX_VALUE,
     CONF_MIN_VALUE,
     CONF_ORIENTATION,
+    CONF_PRIMARY_CONTROLS,
+    CONF_TARGET_TEMPERATURE,
     CONF_WIDTH,
     CONF_SCREENS,
     CONF_THEMES,
@@ -23,6 +29,7 @@ from components.ha_deck import (
     CONF_WEATHER_ICON_SIZE,
     CONF_WIDGETS,
     CONF_DEFAULT_THEME,
+    CLIMATE_SCHEMA,
     _final_validate_weather_icon_size,
     _validate_float_format,
     _validate_slider,
@@ -66,6 +73,23 @@ class SliderValidationTest(unittest.TestCase):
         for minimum, maximum in ((1, 1), (10, 0)):
             with self.subTest(minimum=minimum, maximum=maximum), self.assertRaises(cv.Invalid):
                 _validate_slider(self._config(minimum, maximum))
+
+
+class ClimateDefaultsTest(unittest.TestCase):
+    def test_uses_semantic_mode_accents(self):
+        config = CLIMATE_SCHEMA({
+            CONF_WIDTH: 480,
+            CONF_HEIGHT: 480,
+            "x": 0,
+            "y": 0,
+            CONF_CURRENT_TEMPERATURE: 20,
+            CONF_TARGET_TEMPERATURE: 21,
+            CONF_PRIMARY_CONTROLS: [{}],
+        })
+
+        self.assertEqual(config[CONF_ACCENT], "climate")
+        self.assertEqual(config[CONF_HEATING_ACCENT], "heat")
+        self.assertEqual(config[CONF_DRYING_ACCENT], "dry")
 
 
 class WeatherIconSizeValidationTest(unittest.TestCase):

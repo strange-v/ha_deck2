@@ -411,9 +411,9 @@ CLIMATE_SCHEMA = cv.All(cv.Schema({
     cv.Optional(CONF_STEP, default=0.5): cv.float_,
     cv.Optional(CONF_FORMAT, default="%.1f"): FLOAT_FORMAT,
     cv.Optional(CONF_UNITS, default="°C"): cv.string_strict,
-    cv.Optional(CONF_ACCENT, default=""): cv.string_strict,
-    cv.Optional(CONF_HEATING_ACCENT, default=""): cv.string_strict,
-    cv.Optional(CONF_DRYING_ACCENT, default=""): cv.string_strict,
+    cv.Optional(CONF_ACCENT, default="climate"): cv.string_strict,
+    cv.Optional(CONF_HEATING_ACCENT, default="heat"): cv.string_strict,
+    cv.Optional(CONF_DRYING_ACCENT, default="dry"): cv.string_strict,
     cv.Optional(CONF_ARC_MODE, default="cooling"): cv.templatable(
         cv.one_of("cooling", "heating", "drying", lower=True)
     ),

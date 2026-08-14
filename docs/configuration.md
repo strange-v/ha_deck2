@@ -210,9 +210,9 @@ Weather images use `fonts.icon_medium` for their size. If themes use different i
 | `step` | No | `0.5` | Target adjustment step; must be positive. |
 | `format` | No | `%.1f` | Temperature float format. |
 | `units` | No | `°C` | Temperature units. |
-| `accent` | No | Theme primary | Cooling accent. |
-| `heating_accent` | No | `accent` | Heating accent. |
-| `drying_accent` | No | `accent` | Drying accent. |
+| `accent` | No | `climate` | Cooling accent. |
+| `heating_accent` | No | `heat` | Heating accent. |
+| `drying_accent` | No | `dry` | Drying accent. |
 | `arc_mode` | No | `cooling` | **Templatable:** `cooling`, `heating`, or `drying`. |
 | `optimistic_timeout` | No | `2s` | Holds a new target while external state catches up. |
 | `padding` | No | Theme metric | Inner padding. |
