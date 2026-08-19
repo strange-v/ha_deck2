@@ -9,6 +9,7 @@
 
 #include "button.h"
 #include "climate.h"
+#include "ha_state_utils.h"
 #include "navigation_button.h"
 #include "screen.h"
 #include "slider.h"

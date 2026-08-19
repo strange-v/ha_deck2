@@ -20,6 +20,12 @@ globals:
     restore_value: no
     initial_value: "false"
 
+text_sensor:
+  - platform: template
+    id: test_ha_state
+    lambda: return {"opening"};
+    update_interval: never
+
 image:
   - file: icon.svg
     id: test_icon
@@ -131,7 +137,10 @@ ha_deck:
             height: 72
             text: Disabled
             disabled: true
-            visible: !lambda return true;
+            visible: !lambda |-
+              return ha_is_available(id(test_ha_state)) &&
+                     ha_state_in(id(test_ha_state), "opening", "closing") &&
+                     !ha_state_not_in(id(test_ha_state), "opening", "closing");
 
         - button:
             id: btn_icon

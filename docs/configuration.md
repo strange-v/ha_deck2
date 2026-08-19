@@ -287,3 +287,25 @@ The `power` object supports:
 ```
 
 Screen animations are `none`, `over_left`, `over_right`, `over_top`, `over_bottom`, `move_left`, `move_right`, `move_top`, `move_bottom`, `fade_in`, `fade_out`, `out_left`, `out_right`, `out_top`, and `out_bottom`.
+
+## Home Assistant state helpers
+
+HA Deck provides helpers for safely using Home Assistant `text_sensor` states in lambdas. A state is considered
+available after it has been received and when it is neither empty, `unknown`, nor `unavailable`.
+
+```yaml
+visible: !lambda |-
+  return ha_is_available(id(ha_alarm_state));
+```
+
+Use `ha_state_in` and `ha_state_not_in` to compare against any number of states. Both return `false` when the entity
+is unavailable, preventing an unavailable entity from accidentally passing a negative comparison.
+
+```yaml
+visible: !lambda |-
+  return ha_state_not_in(
+    id(ha_blinds_state),
+    "opening",
+    "closing"
+  );
+```
