@@ -78,9 +78,9 @@ void HaDeckNavigationButton::event_callback_(lv_event_t *event) {
   if (button->parent_ == nullptr)
     return;
   if (button->back_)
-    button->parent_->go_back();
+    button->parent_->go_back(button->animation_, button->time_);
   else if (button->target_ != nullptr)
-    button->parent_->switch_screen(button->target_);
+    button->parent_->switch_screen(button->target_, button->animation_, button->time_);
 }
 
 }  // namespace esphome::ha_deck

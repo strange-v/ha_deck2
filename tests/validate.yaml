@@ -236,6 +236,8 @@ ha_deck:
             align: top_left
             back: true
             glyph: T
+            animation: over_right
+            time: 220ms
 
         - climate:
             id: test_climate

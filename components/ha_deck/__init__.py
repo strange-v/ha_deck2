@@ -460,6 +460,8 @@ NAVIGATION_BUTTON_SCHEMA = cv.All(cv.Schema({
     cv.Optional(CONF_BACK, default=False): cv.boolean,
     cv.Optional(CONF_TARGET): cv.use_id(HaDeckScreen),
     cv.Optional(CONF_GLYPH, default="\U000F004D"): cv.string_strict,
+    cv.Optional(CONF_ANIMATION, default="none"): cv.one_of(*ANIMATIONS, lower=True),
+    cv.Optional(CONF_TIME, default="200ms"): cv.positive_time_period_milliseconds,
 }), _validate_navigation_button)
 
 WIDGET_SCHEMA = cv.Any(
@@ -910,6 +912,8 @@ async def _navigation_button_to_code(conf, screen, deck):
     cg.add(var.set_visible(await cg.templatable(conf[CONF_VISIBLE], [], cg.bool_)))
     cg.add(var.set_back(conf[CONF_BACK]))
     cg.add(var.set_glyph(conf[CONF_GLYPH]))
+    cg.add(var.set_animation(cg.RawExpression(ANIMATIONS[conf[CONF_ANIMATION]])))
+    cg.add(var.set_time(conf[CONF_TIME].total_milliseconds))
     if CONF_TARGET in conf:
         cg.add(var.set_target(await cg.get_variable(conf[CONF_TARGET])))
     cg.add(screen.add_widget(var))

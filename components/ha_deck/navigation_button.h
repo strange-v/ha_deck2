@@ -42,6 +42,8 @@ class HaDeckNavigationButton : public HaDeckWidget {
   void set_target(HaDeckScreen *target) { this->target_ = target; }
   void set_back(bool back) { this->back_ = back; }
   void set_glyph(const std::string &glyph) { this->glyph_ = glyph; }
+  void set_animation(lv_screen_load_anim_t animation) { this->animation_ = animation; }
+  void set_time(uint32_t time) { this->time_ = time; }
 
   void mount(lv_obj_t *parent, HaDeckTheme *theme) override;
   void unmount() override;
@@ -67,6 +69,8 @@ class HaDeckNavigationButton : public HaDeckWidget {
   bool has_margin_{false};
   lv_align_t alignment_{LV_ALIGN_TOP_LEFT};
   uint16_t margin_{0};
+  lv_screen_load_anim_t animation_{LV_SCREEN_LOAD_ANIM_NONE};
+  uint32_t time_{200};
   lv_obj_t *button_{nullptr};
   lv_obj_t *label_{nullptr};
 };

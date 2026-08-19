@@ -11,6 +11,7 @@ substitutions:
   weather_entity: weather.home
   sun_entity: sun.sun
   blinds_entity: cover.living_room_blinds
+  blinds_home_button_entity: button.living_room_blinds_home
   left_light_entity: light.living_room_lights_led_a
   right_light_entity: light.living_room_lights_led_b
   heating_entity: climate.heating_controller_living_room_thermostat
@@ -181,6 +182,7 @@ font:
       - "\U000F0210" # fan
       - "\U000F0238" # fire
       - "\U000F0717" # snowflake
+      - "\U000F0493" # cog
 
 image:
   - file: assets/480x480_trees.jpg
@@ -261,6 +263,11 @@ ha_deck:
                   data:
                     entity_id: ${blinds_entity}
                     position: "50"
+            on_long_press:
+              - homeassistant.service:
+                  service: button.press
+                  data:
+                    entity_id: ${blinds_home_button_entity}
 
         - button:
             id: button_stop
