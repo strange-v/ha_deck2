@@ -15,6 +15,7 @@ namespace esphome::ha_deck {
 enum class ButtonVariant : uint8_t {
   FILLED,
   GLASS,
+  ICON,
 };
 
 class HaDeckButton : public HaDeckWidget, public Trigger<> {

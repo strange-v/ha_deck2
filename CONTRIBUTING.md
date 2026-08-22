@@ -22,6 +22,7 @@ Keep PlatformIO and ESPHome caches on the Linux filesystem rather than the mount
 
 ```bash
 cd /path/to/ha_deck2
+source "$HOME/esphome-venv/bin/activate"
 export PLATFORMIO_CORE_DIR=/tmp/ha_deck2-platformio
 export ESPHOME_CACHE_DIR=/tmp/ha_deck2-cache
 esphome compile tests/validate.yaml
@@ -41,6 +42,7 @@ The YAML files also set `esphome.build_path` below `/tmp/esphome`.
 
 ```bash
 cd /path/to/ha_deck2
+source "$HOME/esphome-venv/bin/activate"
 export PLATFORMIO_CORE_DIR=/tmp/ha_deck2-platformio
 export ESPHOME_CACHE_DIR=/tmp/ha_deck2-cache
 set -a

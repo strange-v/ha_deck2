@@ -86,7 +86,16 @@ void HaDeckButton::apply_theme(HaDeckTheme *theme) {
   uint32_t on_accent_color;
   theme->resolve_accent(accent, &accent_color, &on_accent_color);
   uint32_t foreground;
-  if (this->variant_ == ButtonVariant::FILLED) {
+  if (this->variant_ == ButtonVariant::ICON) {
+    foreground = this->has_text_color_ ? this->text_color_ : theme->on_surface_color();
+    lv_obj_set_style_bg_opa(this->button_, LV_OPA_TRANSP, MAIN_DEFAULT);
+    lv_obj_set_style_border_width(this->button_, 0, MAIN_DEFAULT);
+    lv_obj_set_style_shadow_width(this->button_, 0, MAIN_DEFAULT);
+    lv_obj_set_style_radius(this->button_, radius, MAIN_DEFAULT);
+    lv_obj_set_style_opa(this->button_, LV_OPA_COVER, MAIN_DEFAULT);
+    lv_obj_set_style_opa(this->button_, 180, MAIN_PRESSED);
+    lv_obj_set_style_opa(this->button_, disabled_opacity, MAIN_DISABLED);
+  } else if (this->variant_ == ButtonVariant::FILLED) {
     foreground = this->has_text_color_ ? this->text_color_ : on_accent_color;
     lv_obj_set_style_bg_color(this->button_,
                               lv_color_hex(this->has_background_color_ ? this->background_color_ : accent_color),

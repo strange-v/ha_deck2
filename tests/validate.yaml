@@ -148,6 +148,7 @@ ha_deck:
             y: 112
             width: 72
             height: 72
+            variant: icon
             icon: test_icon
             text: T
             font: test_font

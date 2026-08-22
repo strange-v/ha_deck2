@@ -98,6 +98,7 @@ ha_deck:
             y: 10
             width: 60
             height: 60
+            variant: icon
             icon: test_icon
             accent_icon: true
             toggle: true

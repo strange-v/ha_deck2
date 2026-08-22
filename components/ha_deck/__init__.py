@@ -266,7 +266,7 @@ BUTTON_SCHEMA = cv.All(
         cv.Required(CONF_WIDTH): cv.positive_int,
         cv.Required(CONF_HEIGHT): cv.positive_int,
         cv.Optional(CONF_VARIANT, default="glass"): cv.one_of(
-            "filled", "glass", lower=True
+            "filled", "glass", "icon", lower=True
         ),
         cv.Optional(CONF_ACCENT, default=""): cv.templatable(cv.string_strict),
         cv.Optional(CONF_ACCENT_ICON, default=False): cv.templatable(cv.boolean),

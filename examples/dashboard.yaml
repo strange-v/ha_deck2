@@ -16,6 +16,7 @@ substitutions:
   right_light_entity: light.living_room_lights_led_b
   heating_entity: climate.heating_controller_living_room_thermostat
   ac_entity: climate.living_room
+  tv_entity: media_player.55pus6501_12_2
 
 host:
 
@@ -95,7 +96,7 @@ text_sensor:
   - platform: homeassistant
     id: ha_ac_mode
     entity_id: ${ac_entity}
-  - platform: homeassistant
+    - platform: homeassistant
     id: ha_ac_fan_mode
     entity_id: ${ac_entity}
     attribute: fan_mode
@@ -103,6 +104,9 @@ text_sensor:
     id: ha_ac_swing_mode
     entity_id: ${ac_entity}
     attribute: swing_mode
+  - platform: homeassistant
+    id: ha_tv_state
+    entity_id: ${tv_entity}
 
 external_components:
   - source:
@@ -183,9 +187,17 @@ font:
       - "\U000F0238" # fire
       - "\U000F0717" # snowflake
       - "\U000F0493" # cog
+      - "\U000F0502" # television
+      - "\U000F04AE" # skip-previous
+      - "\U000F03E4" # pause
+      - "\U000F040A" # play
+      - "\U000F04AD" # skip-next
+      - "\U000F075D" # volume-plus
+      - "\U000F075E" # volume-minus
 
 image:
-  - file: assets/480x480_trees.jpg
+  - platform: file
+    file: assets/480x480_trees.jpg
     id: dashboard_background
     type: RGB565
     resize: 480x480
@@ -212,6 +224,22 @@ ha_deck:
     - id: scr_main
       background_image: dashboard_background
       widgets:
+        - button:
+            id: button_tv
+            x: 8
+            y: 8
+            width: 64
+            height: 64
+            variant: icon
+            icon:
+              glyph: "\U000F0502"
+            visible: !lambda return id(ha_tv_state).has_state() && id(ha_tv_state).state == "on";
+            on_click:
+              - ha_deck.screen.show:
+                  id: scr_tv
+                  animation: move_left
+                  time: 220ms
+
         - weather:
             id: outside_weather
             x: 132
@@ -516,6 +544,115 @@ ha_deck:
             id: heating_back
             align: top_left
             back: true
+
+    - id: scr_tv
+      background_image: dashboard_background
+      widgets:
+        - navigation_button:
+            id: tv_back
+            align: top_left
+            back: true
+
+        - button:
+            id: tv_previous
+            x: 32
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F04AE"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_previous_track
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_pause
+            x: 136
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F03E4"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_pause
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_play
+            x: 240
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F040A"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_play
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_next
+            x: 344
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F04AD"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_next_track
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_volume_down
+            x: 136
+            y: 260
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F075E"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.volume_down
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_volume_up
+            x: 240
+            y: 260
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F075D"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.volume_up
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_power_off
+            x: 384
+            y: 384
+            width: 88
+            height: 88
+            # variant: filled
+            icon:
+              glyph: "\U000F0425"
+            accent: climate
+            checked: true
+            on_click:
+              - homeassistant.service:
+                  service: media_player.turn_off
+                  data:
+                    entity_id: ${tv_entity}
 
     - id: scr_ac
       background_image: dashboard_background
