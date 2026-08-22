@@ -1,6 +1,15 @@
 .venv/
 __pycache__/
 *.py[cod]
+node_modules/
+designer/frontend/dist/
+designer/frontend/pnpm-lock.yaml
+designer/frontend/*.tsbuildinfo
+designer/frontend/vite.config.js
+designer/frontend/vite.config.d.ts
+.pytest_cache/
+.ruff_cache/
+.coverage
 
 # Local configuration and credentials
 .env

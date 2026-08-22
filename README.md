@@ -68,6 +68,12 @@ The `lvgl_id` must point to your ESPHome LVGL component. Widget positions and si
 
 See the complete [configuration reference](docs/configuration.md) for the root component, themes, screens, widgets, and actions. Architectural details are in [docs/architecture.md](docs/architecture.md), and the development workflow is in [CONTRIBUTING.md](CONTRIBUTING.md). More examples are available in the [`examples`](examples) directory.
 
+## Layout Editor
+
+The repository includes an early layout-only visual editor under [`designer/`](designer/README.md). It reads the display dimensions, HA Deck screens, widget geometry, themes, and font declarations from an existing ESPHome YAML file. It supports visual multi-selection, movement, and resizing while preserving the rest of the YAML and patching only literal widget geometry. Its design is documented in [Layout Editor Architecture](docs/designer-architecture.md).
+
+The editor is intentionally not a full configuration generator. Widgets, bindings, fonts, images, automations, and other properties continue to be edited in YAML. GitHub Releases can publish it as a multi-architecture Docker image; see the [Designer documentation](designer/README.md#published-docker-image).
+
 ## Screens and themes
 
 Each screen contains a list of widgets and can have its own background color or image. Open another screen from an automation:

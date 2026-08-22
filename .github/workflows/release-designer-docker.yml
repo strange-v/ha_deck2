@@ -1,0 +1,51 @@
+name: Release Designer Docker image
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      REF_NAME: ${{ github.event.release.tag_name }}
+      DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REPO }}
+          tags: |
+            type=semver,pattern={{version}},priority=100
+            type=semver,pattern={{major}}.{{minor}},priority=90,enable=${{ !contains(env.REF_NAME, '-') }}
+            type=semver,pattern={{major}},priority=80,enable=${{ !contains(env.REF_NAME, '-') }}
+            type=raw,value=latest,priority=70,enable=${{ !contains(env.REF_NAME, '-') }}
+            type=raw,value=beta,priority=60,enable=${{ contains(env.REF_NAME, '-beta') }}
+            type=raw,value=rc,priority=60,enable=${{ contains(env.REF_NAME, '-rc') }}
+          flavor: |
+            latest=false
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: designer/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

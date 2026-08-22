@@ -1,0 +1,11 @@
+services:
+  ha-deck-designer:
+    build:
+      context: .
+      dockerfile: designer/Dockerfile
+    image: ha-deck-designer:dev
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    volumes:
+      - ./examples:/config
