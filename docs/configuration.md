@@ -10,6 +10,7 @@ ha_deck:
   lvgl_id: main_lvgl
   default_theme: material_dark
   default_screen: scr_main
+  screen_timeout: 30s
   themes:
     - id: material_dark
   screens:
@@ -24,6 +25,7 @@ ha_deck:
 | `default_theme` | Yes | — | Theme activated during setup. |
 | `default_screen` | Yes | — | Screen shown during setup and retained during navigation. |
 | `update_interval` | No | `100ms` | Reevaluation interval for the active screen. |
+| `screen_timeout` | No | `30s` | Inactivity delay before a non-persistent screen returns to `default_screen`. Touch input resets the timer. |
 | `weather_icon_size` | No | `fonts.icon_medium` size | Shared compiled weather-image size, from 8 to 128 px. |
 | `weather_icon_directory` | No | Bundled Meteocons | Complete replacement directory for the 16 weather SVGs. Relative paths resolve from the main ESPHome YAML. |
 | `themes` | Yes | — | Non-empty list of theme definitions. |
@@ -73,6 +75,7 @@ Screens are mounted lazily. The default screen remains mounted while transient s
 | `widgets` | Yes | — | Widget list; it may be empty. |
 | `background_color` | No | Active theme background | Per-screen background override. |
 | `background_image` | No | — | ESPHome image drawn over the background color. |
+| `persistent` | No | `false` | Prevents automatic return to `default_screen`. The default screen is always persistent. |
 
 ## Widgets
 

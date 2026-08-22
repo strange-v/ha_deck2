@@ -33,6 +33,7 @@ class HaDeck : public PollingComponent {
   }
   void set_default_screen(HaDeckScreen *screen) { this->default_screen_ = screen; }
   void set_default_theme(HaDeckTheme *theme) { this->default_theme_ = theme; }
+  void set_screen_timeout(uint32_t timeout) { this->screen_timeout_ = timeout; }
 
   bool switch_screen(const std::string &name, lv_screen_load_anim_t animation = LV_SCREEN_LOAD_ANIM_NONE,
                      uint32_t time = 0);
@@ -59,6 +60,8 @@ class HaDeck : public PollingComponent {
   HaDeckScreen *active_screen_{nullptr};
   HaDeckTheme *active_theme_{nullptr};
   std::vector<HaDeckScreen *> navigation_history_{};
+  uint32_t screen_timeout_{30000};
+  uint32_t screen_activated_at_{0};
   bool navigating_back_{false};
 };
 

@@ -19,6 +19,8 @@ class HaDeckScreen {
   void set_name(const std::string &name) { this->name_ = name; }
   const std::string &get_name() const { return this->name_; }
   void set_parent(HaDeck *parent) { this->parent_ = parent; }
+  void set_persistent(bool persistent) { this->persistent_ = persistent; }
+  bool is_persistent() const { return this->persistent_; }
   void add_widget(HaDeckWidget *widget) { this->widgets_.push_back(widget); }
   void set_background_color(uint32_t color) {
     this->background_color_ = color;
@@ -44,6 +46,7 @@ class HaDeckScreen {
   image::Image *background_image_{nullptr};
   uint32_t background_color_{0};
   bool has_background_color_{false};
+  bool persistent_{false};
 };
 
 }  // namespace esphome::ha_deck

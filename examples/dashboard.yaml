@@ -206,6 +206,7 @@ ha_deck:
   id: deck
   lvgl_id: dashboard_lvgl
   update_interval: 100ms
+  screen_timeout: 30s
   default_theme: glass
   default_screen: scr_main
   weather_icon_directory: !env_var HA_DECK_WEATHER_ICONS_DIR ../components/ha_deck/assets/weather

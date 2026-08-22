@@ -32,6 +32,8 @@ from components.ha_deck import (
     CONF_VARIANT,
     BUTTON_SCHEMA,
     CLIMATE_SCHEMA,
+    CONF_PERSISTENT,
+    SCREEN_SCHEMA,
     _final_validate_weather_icon_size,
     _validate_float_format,
     _validate_slider,
@@ -114,6 +116,16 @@ class ClimateDefaultsTest(unittest.TestCase):
         self.assertEqual(config[CONF_ACCENT], "climate")
         self.assertEqual(config[CONF_HEATING_ACCENT], "heat")
         self.assertEqual(config[CONF_DRYING_ACCENT], "dry")
+
+
+class ScreenValidationTest(unittest.TestCase):
+    def test_transient_by_default(self):
+        config = SCREEN_SCHEMA({CONF_WIDGETS: []})
+        self.assertFalse(config[CONF_PERSISTENT])
+
+    def test_accepts_persistent_screen(self):
+        config = SCREEN_SCHEMA({CONF_WIDGETS: [], CONF_PERSISTENT: True})
+        self.assertTrue(config[CONF_PERSISTENT])
 
 
 class WeatherIconSizeValidationTest(unittest.TestCase):

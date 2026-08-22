@@ -20,6 +20,18 @@ void HaDeck::setup() {
 
   lv_display_set_default(this->lvgl_->get_disp());
   this->active_theme_ = this->default_theme_;
+  this->lvgl_->add_on_idle_callback([this](uint32_t idle_time) {
+    if (this->active_screen_ == nullptr || this->active_screen_ == this->default_screen_ ||
+        this->active_screen_->is_persistent() || idle_time < this->screen_timeout_ ||
+        millis() - this->screen_activated_at_ < this->screen_timeout_)
+      return;
+
+    ESP_LOGD(TAG, "Screen timeout; returning to default screen");
+    this->navigation_history_.clear();
+    this->navigating_back_ = true;
+    this->switch_screen(this->default_screen_);
+    this->navigating_back_ = false;
+  });
   if (!this->switch_screen(this->default_screen_)) {
     ESP_LOGE(TAG, "Unable to show default screen");
     this->mark_failed();
@@ -54,6 +66,7 @@ bool HaDeck::switch_screen(HaDeckScreen *screen, lv_screen_load_anim_t animation
   auto *target_obj = screen->get_obj();
   const bool delete_previous = previous_screen == nullptr || previous_screen != this->default_screen_;
   this->active_screen_ = screen;
+  this->screen_activated_at_ = millis();
   if (!this->navigating_back_ && previous_screen != nullptr)
     this->navigation_history_.push_back(previous_screen);
 
@@ -124,9 +137,11 @@ void HaDeck::dump_config() {
                 "HA Deck:\n"
                 "  Screens: %u\n"
                 "  Themes: %u\n"
+                "  Screen timeout: %u ms\n"
                 "  Active screen: %s\n"
                 "  Active theme: %s",
                 static_cast<unsigned>(this->screens_.size()), static_cast<unsigned>(this->themes_.size()),
+                static_cast<unsigned>(this->screen_timeout_),
                 this->active_screen_ == nullptr ? "none" : this->active_screen_->get_name().c_str(),
                 this->active_theme_ == nullptr ? "none" : this->active_theme_->get_name().c_str());
   LOG_UPDATE_INTERVAL(this);

@@ -48,6 +48,8 @@ CONF_TEXT_COLOR = "text_color"
 CONF_RADIUS = "radius"
 CONF_DISABLED_OPACITY = "disabled_opacity"
 CONF_VARIANT = "variant"
+CONF_PERSISTENT = "persistent"
+CONF_SCREEN_TIMEOUT = "screen_timeout"
 CONF_ANIMATION = "animation"
 CONF_TOGGLE = "toggle"
 CONF_CHECKED = "checked"
@@ -474,6 +476,7 @@ WIDGET_SCHEMA = cv.Any(
 )
 SCREEN_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(HaDeckScreen),
+    cv.Optional(CONF_PERSISTENT, default=False): cv.boolean,
     cv.Optional(CONF_BACKGROUND_COLOR): cv.hex_uint32_t,
     cv.Optional(CONF_BACKGROUND_IMAGE): cv.use_id(image.Image_),
     cv.Required(CONF_WIDGETS): cv.ensure_list(WIDGET_SCHEMA),
@@ -630,6 +633,7 @@ CONFIG_SCHEMA = cv.All(
         cv.Required(CONF_LVGL_ID): cv.use_id(lvgl.LvglComponent),
         cv.Required(CONF_DEFAULT_SCREEN): cv.use_id(HaDeckScreen),
         cv.Required(CONF_DEFAULT_THEME): cv.use_id(HaDeckTheme),
+        cv.Optional(CONF_SCREEN_TIMEOUT, default="30s"): cv.positive_time_period_milliseconds,
         cv.Optional(CONF_WEATHER_ICON_SIZE): cv.int_range(min=8, max=128),
         cv.Optional(CONF_WEATHER_ICON_DIRECTORY): _validate_weather_icon_directory,
         cv.Required(CONF_SCREENS): cv.All(cv.ensure_list(SCREEN_SCHEMA), cv.Length(min=1)),
@@ -979,6 +983,7 @@ async def to_code(config):
     for conf in config[CONF_SCREENS]:
         screen = cg.new_Pvariable(conf[CONF_ID])
         cg.add(screen.set_name(str(conf[CONF_ID])))
+        cg.add(screen.set_persistent(conf[CONF_PERSISTENT]))
         if CONF_BACKGROUND_COLOR in conf:
             cg.add(screen.set_background_color(conf[CONF_BACKGROUND_COLOR]))
         if CONF_BACKGROUND_IMAGE in conf:
@@ -1004,6 +1009,7 @@ async def to_code(config):
 
     cg.add(deck.set_default_screen(await cg.get_variable(config[CONF_DEFAULT_SCREEN])))
     cg.add(deck.set_default_theme(await cg.get_variable(config[CONF_DEFAULT_THEME])))
+    cg.add(deck.set_screen_timeout(config[CONF_SCREEN_TIMEOUT].total_milliseconds))
 
 
 SHOW_SCREEN_SCHEMA = cv.maybe_simple_value({
