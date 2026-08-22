@@ -117,7 +117,12 @@ export default function Canvas({ screen, theme, zoom }: { screen: LayoutScreen; 
             <WidgetPreview widget={widget} theme={theme} />
           </div>;
         })}
-        {marquee && <div className="marquee" style={marquee} />}
+        {marquee && <div className="marquee" style={{
+          left: marquee.x,
+          top: marquee.y,
+          width: marquee.width,
+          height: marquee.height,
+        }} />}
       </div>
     </div>
   </div>;
