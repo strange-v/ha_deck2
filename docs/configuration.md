@@ -111,7 +111,7 @@ A `button` needs `text`, `icon`, or both. If both are present, the icon is shown
 | `text` | No | — | Button label. |
 | `icon` | No | — | ESPHome image, or an `image`/`glyph` icon object. |
 | `font` | No | Theme font | Font for `text`. |
-| `variant` | No | `glass` | `glass` or `filled`. |
+| `variant` | No | `glass` | `glass`, `filled`, or `icon`. |
 | `accent` | No | Theme primary | **Templatable.** Named theme accent. |
 | `accent_icon` | No | `false` | **Templatable.** Uses the accent color for a glass button icon. |
 | `visible` | No | `true` | **Templatable.** Widget visibility. |

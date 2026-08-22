@@ -545,115 +545,6 @@ ha_deck:
             align: top_left
             back: true
 
-    - id: scr_tv
-      background_image: dashboard_background
-      widgets:
-        - navigation_button:
-            id: tv_back
-            align: top_left
-            back: true
-
-        - button:
-            id: tv_previous
-            x: 32
-            y: 156
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F04AE"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.media_previous_track
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_pause
-            x: 136
-            y: 156
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F03E4"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.media_pause
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_play
-            x: 240
-            y: 156
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F040A"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.media_play
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_next
-            x: 344
-            y: 156
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F04AD"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.media_next_track
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_volume_down
-            x: 136
-            y: 260
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F075E"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.volume_down
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_volume_up
-            x: 240
-            y: 260
-            width: 88
-            height: 88
-            icon:
-              glyph: "\U000F075D"
-            on_click:
-              - homeassistant.service:
-                  service: media_player.volume_up
-                  data:
-                    entity_id: ${tv_entity}
-
-        - button:
-            id: tv_power_off
-            x: 384
-            y: 384
-            width: 88
-            height: 88
-            # variant: filled
-            icon:
-              glyph: "\U000F0425"
-            accent: climate
-            checked: true
-            on_click:
-              - homeassistant.service:
-                  service: media_player.turn_off
-                  data:
-                    entity_id: ${tv_entity}
-
     - id: scr_ac
       background_image: dashboard_background
       widgets:
@@ -792,3 +683,112 @@ ha_deck:
             id: ac_back
             align: top_left
             back: true
+
+    - id: scr_tv
+      background_image: dashboard_background
+      widgets:
+        - navigation_button:
+            id: tv_back
+            align: top_left
+            back: true
+
+        - button:
+            id: tv_previous
+            x: 32
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F04AE"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_previous_track
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_pause
+            x: 136
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F03E4"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_pause
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_play
+            x: 240
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F040A"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_play
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_next
+            x: 344
+            y: 156
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F04AD"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.media_next_track
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_volume_down
+            x: 136
+            y: 260
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F075E"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.volume_down
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_volume_up
+            x: 240
+            y: 260
+            width: 88
+            height: 88
+            icon:
+              glyph: "\U000F075D"
+            on_click:
+              - homeassistant.service:
+                  service: media_player.volume_up
+                  data:
+                    entity_id: ${tv_entity}
+
+        - button:
+            id: tv_power_off
+            x: 384
+            y: 384
+            width: 88
+            height: 88
+            # variant: filled
+            icon:
+              glyph: "\U000F0425"
+            accent: climate
+            checked: true
+            on_click:
+              - homeassistant.service:
+                  service: media_player.turn_off
+                  data:
+                    entity_id: ${tv_entity}

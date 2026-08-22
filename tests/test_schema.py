@@ -29,6 +29,8 @@ from components.ha_deck import (
     CONF_WEATHER_ICON_SIZE,
     CONF_WIDGETS,
     CONF_DEFAULT_THEME,
+    CONF_VARIANT,
+    BUTTON_SCHEMA,
     CLIMATE_SCHEMA,
     _final_validate_weather_icon_size,
     _validate_float_format,
@@ -73,6 +75,28 @@ class SliderValidationTest(unittest.TestCase):
         for minimum, maximum in ((1, 1), (10, 0)):
             with self.subTest(minimum=minimum, maximum=maximum), self.assertRaises(cv.Invalid):
                 _validate_slider(self._config(minimum, maximum))
+
+
+class ButtonVariantValidationTest(unittest.TestCase):
+    def _config(self, variant):
+        return {
+            "x": 0,
+            "y": 0,
+            CONF_WIDTH: 64,
+            CONF_HEIGHT: 64,
+            "text": "Test",
+            CONF_VARIANT: variant,
+        }
+
+    def test_accepts_supported_variants(self):
+        for variant in ("filled", "glass", "icon"):
+            with self.subTest(variant=variant):
+                config = BUTTON_SCHEMA(self._config(variant))
+                self.assertEqual(config[CONF_VARIANT], variant)
+
+    def test_rejects_unknown_variant(self):
+        with self.assertRaises(cv.Invalid):
+            BUTTON_SCHEMA(self._config("outline"))
 
 
 class ClimateDefaultsTest(unittest.TestCase):
