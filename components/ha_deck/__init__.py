@@ -309,7 +309,7 @@ VALUE_DISPLAY_FIELDS = {
     cv.Optional(CONF_ICON): ICON_SCHEMA,
     cv.Optional(CONF_VALUE_FONT): cv.use_id(font.Font),
     cv.Optional(CONF_TEXT_FONT): cv.use_id(font.Font),
-    cv.Optional(CONF_ACCENT, default=""): cv.string_strict,
+    cv.Optional(CONF_ACCENT, default="neutral"): cv.string_strict,
 }
 
 SENSOR_VALUE_SCHEMA = cv.Schema({

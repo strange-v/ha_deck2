@@ -96,7 +96,7 @@ text_sensor:
   - platform: homeassistant
     id: ha_ac_mode
     entity_id: ${ac_entity}
-    - platform: homeassistant
+  - platform: homeassistant
     id: ha_ac_fan_mode
     entity_id: ${ac_entity}
     attribute: fan_mode

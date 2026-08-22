@@ -25,6 +25,8 @@ from components.ha_deck import (
     CONF_SCREENS,
     CONF_THEMES,
     CONF_WEATHER,
+    CONF_CONDITION,
+    CONF_TEMPERATURE,
     CONF_WEATHER_ICON_DIRECTORY,
     CONF_WEATHER_ICON_SIZE,
     CONF_WIDGETS,
@@ -34,6 +36,8 @@ from components.ha_deck import (
     CLIMATE_SCHEMA,
     CONF_PERSISTENT,
     SCREEN_SCHEMA,
+    SENSOR_VALUE_SCHEMA,
+    WEATHER_SCHEMA,
     _final_validate_weather_icon_size,
     _validate_float_format,
     _validate_slider,
@@ -126,6 +130,31 @@ class ScreenValidationTest(unittest.TestCase):
     def test_accepts_persistent_screen(self):
         config = SCREEN_SCHEMA({CONF_WIDGETS: [], CONF_PERSISTENT: True})
         self.assertTrue(config[CONF_PERSISTENT])
+
+
+class SensorValueDefaultsTest(unittest.TestCase):
+    def test_uses_neutral_accent_by_default(self):
+        config = SENSOR_VALUE_SCHEMA({
+            "x": 0,
+            "y": 0,
+            CONF_WIDTH: 200,
+            CONF_HEIGHT: 64,
+            "value": 42,
+        })
+        self.assertEqual(config[CONF_ACCENT], "neutral")
+
+
+class WeatherDefaultsTest(unittest.TestCase):
+    def test_uses_neutral_accent_by_default(self):
+        config = WEATHER_SCHEMA({
+            "x": 0,
+            "y": 0,
+            CONF_WIDTH: 216,
+            CONF_HEIGHT: 64,
+            CONF_TEMPERATURE: 12,
+            CONF_CONDITION: "sunny",
+        })
+        self.assertEqual(config[CONF_ACCENT], "neutral")
 
 
 class WeatherIconSizeValidationTest(unittest.TestCase):

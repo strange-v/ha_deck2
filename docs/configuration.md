@@ -153,7 +153,7 @@ After a long press, click and toggle actions are skipped for that gesture.
 | `icon` | No | — | ESPHome image or glyph icon. |
 | `value_font` | No | `text_medium` | Local value font. |
 | `text_font` | No | `text_small` | Local font for units and supporting text. |
-| `accent` | No | Theme primary | Named theme accent. |
+| `accent` | No | `neutral` | Named theme accent. The default follows the theme's normal foreground (`on_surface_color`). |
 
 ### Weather
 
@@ -171,7 +171,7 @@ After a long press, click and toggle actions are skipped for that gesture.
 | `unavailable_text` | No | `−` | Text shown for `NaN`. |
 | `top_text`, `bottom_text` | No | Empty | Supporting text. |
 | `value_font`, `text_font` | No | Theme fonts | Local font overrides. |
-| `accent` | No | Theme primary | Named theme accent. |
+| `accent` | No | `neutral` | Named theme accent. The default follows the theme's normal foreground (`on_surface_color`). |
 
 Weather images use `fonts.icon_medium` for their size. If themes use different icon sizes, set root option `weather_icon_size` to a value from 8 to 128. To use your own set, point `weather_icon_directory` at a directory containing all files listed in `components/ha_deck/assets/weather/README.md`. Missing files are reported during configuration validation.
 
