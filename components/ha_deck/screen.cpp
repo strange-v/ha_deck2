@@ -1,5 +1,7 @@
 ﻿#include "screen.h"
 
+#include <algorithm>
+
 #include "ha_deck.h"
 
 namespace esphome::ha_deck {
@@ -54,6 +56,23 @@ void HaDeckScreen::apply_theme(HaDeckTheme *theme) {
   for (auto *widget : this->widgets_)
     widget->apply_theme(theme);
   lv_obj_invalidate(this->obj_);
+}
+
+void HaDeckScreen::notify_shown() {
+  for (auto *widget : this->widgets_)
+    widget->on_shown();
+}
+
+void HaDeckScreen::notify_hidden() {
+  for (auto *widget : this->widgets_)
+    widget->on_hidden();
+}
+
+uint32_t HaDeckScreen::effective_timeout(uint32_t base) const {
+  uint32_t timeout = base;
+  for (auto *widget : this->widgets_)
+    timeout = std::max(timeout, widget->screen_timeout());
+  return timeout;
 }
 
 void HaDeckScreen::show(lv_screen_load_anim_t animation, uint32_t time) {

@@ -33,12 +33,14 @@ from components.ha_deck import (
     CONF_DEFAULT_THEME,
     CONF_VARIANT,
     BUTTON_SCHEMA,
+    CAMERA_SCHEMA,
     CLIMATE_SCHEMA,
     CONF_PERSISTENT,
     SCREEN_SCHEMA,
     SENSOR_VALUE_SCHEMA,
     WEATHER_SCHEMA,
     _final_validate_weather_icon_size,
+    _split_stream_url,
     _validate_float_format,
     _validate_slider,
     _validate_weather_icon_directory,
@@ -130,6 +132,27 @@ class ScreenValidationTest(unittest.TestCase):
     def test_accepts_persistent_screen(self):
         config = SCREEN_SCHEMA({CONF_WIDGETS: [], CONF_PERSISTENT: True})
         self.assertTrue(config[CONF_PERSISTENT])
+
+
+class CameraValidationTest(unittest.TestCase):
+    def _config(self, url):
+        return {"x": 0, "y": 0, CONF_WIDTH: 480, CONF_HEIGHT: 480, "url": url}
+
+    def test_defaults_to_five_minute_timeout(self):
+        config = CAMERA_SCHEMA(self._config("http://cam.local/stream"))
+        self.assertEqual(config["timeout"].total_milliseconds, 300000)
+
+    def test_splits_url_with_port_and_query(self):
+        self.assertEqual(
+            _split_stream_url("http://192.168.1.10:1985/api/stream.mjpeg?src=door"),
+            ("192.168.1.10", 1985, "/api/stream.mjpeg?src=door"),
+        )
+        self.assertEqual(_split_stream_url("http://cam.local"), ("cam.local", 80, "/"))
+
+    def test_rejects_unsupported_urls(self):
+        for url in ("https://cam.local/", "rtsp://cam.local/", "http://user:pw@cam.local/", "http:///x"):
+            with self.subTest(url=url), self.assertRaises(cv.Invalid):
+                CAMERA_SCHEMA(self._config(url))
 
 
 class SensorValueDefaultsTest(unittest.TestCase):

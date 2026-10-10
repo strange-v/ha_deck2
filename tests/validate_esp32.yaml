@@ -162,3 +162,15 @@ ha_deck:
             on_click:
               - lambda: id(deck).switch_screen("scr_main");
 
+
+    - id: scr_camera
+      widgets:
+        - camera:
+            id: test_camera
+            x: 0
+            y: 0
+            width: 240
+            height: 240
+            url: http://192.168.1.10:1985/api/stream.mjpeg?src=entrance_240
+            on_click:
+              - lambda: id(deck).go_back();

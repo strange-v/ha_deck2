@@ -19,6 +19,8 @@ The common widget lifecycle is:
 
 `HaDeckWidget::update()` handles the shared templatable `visible` property before calling the widget-specific update method. New widget types should follow this contract.
 
+Mounting is not the same as being on screen: the default screen stays mounted in the background. Widgets that hold external resources use `on_shown()` and `on_hidden()`, which `switch_screen()` calls when a screen becomes or stops being the active screen. A widget can also return a minimum inactivity timeout from `screen_timeout()`; the active screen times out after the largest of the root `screen_timeout` and these values.
+
 ## Screen lifetime and navigation
 
 Screens are logical definitions and are mounted lazily. The configured default screen is special: it stays mounted while a secondary screen is active. A secondary screen is deleted when navigating away from it. This keeps the common home screen responsive while preventing ten configured screens from retaining ten complete LVGL trees.
@@ -70,6 +72,14 @@ Inside composite widgets, prefer LVGL flex layout and geometry derived from the 
 Weather icons are bundled SVG assets under `components/ha_deck/assets/weather/`. The Python integration registers generated ESPHome image resources automatically; users bind condition text and do not list every weather image. Their shared compile-time resize is derived from the common `icon_medium` font size; `weather_icon_size` is an explicit override for cases where those dimensions should differ. `weather_icon_directory` can replace the entire bundled set with a private directory while preserving the generated image pipeline.
 
 Icon glyphs intentionally have no built-in font. A user must provide a local font or the relevant `icon_small`/`icon_medium` token in every theme.
+
+## Camera stream
+
+`HaDeckCamera` owns one background thread (a pinned pthread on ESP32, `std::thread` on host) that is created on first use and then sleeps while the stream is inactive. The thread reads an HTTP/1.0 `multipart/x-mixed-replace` response with BSD sockets, decodes each part with JPEGDEC into RGB565, and publishes it through triple buffering: LVGL owns the front buffer, the worker owns the back buffer, and the newest completed frame waits in the third until an LVGL timer swaps it in. The worker never waits for LVGL, and a frame is skipped when a newer one is already buffered, so latency does not accumulate.
+
+The stream runs only while the widget is mounted, shown, visible, and not paused. Stopping clears the active flag and shuts the socket down to unblock the receive call; the thread itself is kept. Frame buffers are allocated once, preferably in PSRAM, and retained.
+
+The camera code and its JPEGDEC dependency are compiled only when a configuration uses the widget (`USE_HA_DECK_CAMERA`).
 
 ## Design constraints
 

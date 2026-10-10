@@ -311,3 +311,18 @@ ha_deck:
             on_click:
               - ha_deck.theme.set: material_dark
 
+
+    - id: scr_camera
+      widgets:
+        - camera:
+            id: test_camera
+            x: 0
+            y: 0
+            width: ${display_size}
+            height: ${display_size}
+            url: http://127.0.0.1:1985/api/stream.mjpeg?src=entrance_480
+            timeout: 2min
+            on_click:
+              - lambda: id(deck).go_back();
+        - navigation_button:
+            back: true

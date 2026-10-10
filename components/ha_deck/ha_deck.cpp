@@ -22,8 +22,10 @@ void HaDeck::setup() {
   this->active_theme_ = this->default_theme_;
   this->lvgl_->add_on_idle_callback([this](uint32_t idle_time) {
     if (this->active_screen_ == nullptr || this->active_screen_ == this->default_screen_ ||
-        this->active_screen_->is_persistent() || idle_time < this->screen_timeout_ ||
-        millis() - this->screen_activated_at_ < this->screen_timeout_)
+        this->active_screen_->is_persistent())
+      return;
+    const uint32_t timeout = this->active_screen_->effective_timeout(this->screen_timeout_);
+    if (idle_time < timeout || millis() - this->screen_activated_at_ < timeout)
       return;
 
     ESP_LOGD(TAG, "Screen timeout; returning to default screen");
@@ -79,8 +81,11 @@ bool HaDeck::switch_screen(HaDeckScreen *screen, lv_screen_load_anim_t animation
     lv_screen_load_anim(target_obj, animation, time, 0, delete_previous);
   }
 
+  if (previous_screen != nullptr)
+    previous_screen->notify_hidden();
   if (delete_previous && previous_screen != nullptr)
     previous_screen->unmount();
+  screen->notify_shown();
 
   return true;
 }

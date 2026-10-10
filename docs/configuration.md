@@ -25,7 +25,7 @@ ha_deck:
 | `default_theme` | Yes | — | Theme activated during setup. |
 | `default_screen` | Yes | — | Screen shown during setup and retained during navigation. |
 | `update_interval` | No | `100ms` | Reevaluation interval for the active screen. |
-| `screen_timeout` | No | `30s` | Inactivity delay before a non-persistent screen returns to `default_screen`. Touch input resets the timer. |
+| `screen_timeout` | No | `30s` | Inactivity delay before a non-persistent screen returns to `default_screen`. Touch input resets the timer. A widget can require a longer delay for its screen, for example `camera.timeout`. |
 | `weather_icon_size` | No | `fonts.icon_medium` size | Shared compiled weather-image size, from 8 to 128 px. |
 | `weather_icon_directory` | No | Bundled Meteocons | Complete replacement directory for the 16 weather SVGs. Relative paths resolve from the main ESPHome YAML. |
 | `themes` | Yes | — | Non-empty list of theme definitions. |
@@ -267,6 +267,63 @@ The `power` object supports:
 | `back` | Sometimes | `false` | Uses screen history, then the default screen. |
 | `target` | Sometimes | — | Opens a fixed screen. |
 | `glyph` | No | Back glyph | Font glyph shown by the button. |
+
+### Camera
+
+`camera` shows a live MJPEG stream (`multipart/x-mixed-replace` over plain HTTP). It is intended for RTSP/H.264/H.265 cameras behind a server that transcodes to MJPEG on demand, such as [go2rtc](https://github.com/AlexxIT/go2rtc). The stream is opened only while the widget's screen is active and the widget is visible, so the server stops transcoding when nobody is watching.
+
+```yaml
+- camera:
+    x: 0
+    y: 0
+    width: 480
+    height: 480
+    url: http://192.168.1.10:1984/api/stream.mjpeg?src=entrance_480
+    on_click:
+      - lambda: id(deck).go_back();
+```
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `x`, `y`, `width`, `height` | Yes | — | Position and size. |
+| `url` | Yes | — | `http://` URL of the MJPEG stream. HTTPS and credentials are not supported. |
+| `timeout` | No | `5min` | Inactivity time after which the stream is paused. While the widget is on a screen, it also raises that screen's `screen_timeout` to at least this value. |
+| `visible` | No | `true` | **Templatable.** Hiding the widget closes the stream. |
+| `connecting_text` | No | `Connecting` | Shown until the first frame arrives. |
+| `error_text` | No | `No signal` | Shown while reconnecting; the last frame stays dimmed behind it. |
+| `paused_text` | No | `Paused` | Shown after `timeout`. Tapping the widget resumes the stream. |
+| `on_click` | No | — | Runs when the live view is tapped. |
+
+Status texts use the theme's `text_small` font, so their glyphs must be included in that font.
+
+Frames are centered: smaller frames are letterboxed in black, larger frames are cropped. For the best frame rate, let the server produce exactly the widget size, so the device only decodes and copies. The decoder keeps only the newest frame; if frames arrive faster than they can be shown, older ones are skipped.
+
+The widget needs about three RGB565 frame buffers (`width × height × 2` bytes each) plus a 128 KiB JPEG buffer, so PSRAM is required for full-screen use on ESP32. It is supported on ESP32 and the host (SDL) platform.
+
+An example go2rtc configuration that uses Intel VA-API for decoding and scaling:
+
+```yaml
+api:
+  listen: ":1984"
+
+ffmpeg:
+  rtsp_vaapi: >-
+    -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format vaapi
+    -fflags nobuffer+discardcorrupt -flags low_delay -rtsp_transport tcp -i {input}
+  # Fill 480x480 by cropping the center. Use crop=480:480:0:0 for the left edge.
+  mjpeg_480_cover: >-
+    -vf "scale_vaapi=w=-2:h=480,hwdownload,format=nv12,crop=480:480,format=yuvj420p,setpts=N/FRAME_RATE/TB"
+    -fps_mode passthrough -c:v mjpeg -q:v 5 -huffman 0 -force_duplicated_matrix 1
+  # Fit the width and add black bars. RTP/JPEG needs sizes divisible by 8.
+  mjpeg_480_contain: >-
+    -vf "scale_vaapi=w=480:h=272,hwdownload,format=nv12,pad=480:480:0:(oh-ih)/2:black,format=yuvj420p,setpts=N/FRAME_RATE/TB"
+    -fps_mode passthrough -c:v mjpeg -q:v 5 -huffman 0 -force_duplicated_matrix 1
+
+streams:
+  entrance_480: ffmpeg:rtsp://127.0.0.1:8554/entrance#input=rtsp_vaapi#video=mjpeg_480_cover
+```
+
+`-huffman 0 -force_duplicated_matrix 1` are required because go2rtc carries ffmpeg's output over RTP/JPEG, which only accepts standard Huffman tables.
 
 ## Actions
 

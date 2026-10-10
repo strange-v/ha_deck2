@@ -32,6 +32,9 @@ class HaDeckScreen {
   void unmount();
   void update(bool force = false);
   void apply_theme(HaDeckTheme *theme);
+  void notify_shown();
+  void notify_hidden();
+  uint32_t effective_timeout(uint32_t base) const;
   void show(lv_screen_load_anim_t animation = LV_SCREEN_LOAD_ANIM_NONE, uint32_t time = 0);
 
   lv_obj_t *get_obj() const { return this->obj_; }

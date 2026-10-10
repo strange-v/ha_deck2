@@ -8,6 +8,7 @@
 #include "esphome/core/component.h"
 
 #include "button.h"
+#include "camera.h"
 #include "climate.h"
 #include "ha_state_utils.h"
 #include "navigation_button.h"

@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from esphome import automation
 import esphome.codegen as cg
@@ -15,10 +16,10 @@ import esphome.config_validation as cv
 from esphome.const import (
     CONF_DISABLED, CONF_DITHER, CONF_FILE, CONF_HEIGHT, CONF_ID, CONF_MAX_VALUE, CONF_MIN_VALUE,
     CONF_ON_CLICK, CONF_ON_PRESS, CONF_ON_RELEASE, CONF_ON_TURN_OFF, CONF_ON_TURN_ON,
-    CONF_RAW_DATA_ID, CONF_RESIZE, CONF_SIZE, CONF_TEXT, CONF_TIME, CONF_TYPE, CONF_VALUE,
-    CONF_VALUE_FONT, CONF_VISIBLE, CONF_WIDTH, CONF_X, CONF_Y,
+    CONF_RAW_DATA_ID, CONF_RESIZE, CONF_SIZE, CONF_TEXT, CONF_TIME, CONF_TIMEOUT, CONF_TYPE, CONF_URL,
+    CONF_VALUE, CONF_VALUE_FONT, CONF_VISIBLE, CONF_WIDTH, CONF_X, CONF_Y,
 )
-from esphome.core import ID
+from esphome.core import CORE, ID
 from esphome.final_validate import full_config
 
 DEPENDENCIES = ["lvgl"]
@@ -113,6 +114,10 @@ CONF_DRYING_ACCENT = "drying_accent"
 CONF_ACCENT_ICON = "accent_icon"
 CONF_WEATHER_ICON_SIZE = "weather_icon_size"
 CONF_WEATHER_ICON_DIRECTORY = "weather_icon_directory"
+CONF_CAMERA = "camera"
+CONF_CONNECTING_TEXT = "connecting_text"
+CONF_ERROR_TEXT = "error_text"
+CONF_PAUSED_TEXT = "paused_text"
 
 NAVIGATION_ALIGNMENTS = {
     "top_left": "LV_ALIGN_TOP_LEFT",
@@ -211,6 +216,7 @@ HaDeckClimate = ha_deck_ns.class_("HaDeckClimate")
 HaDeckClimateOption = ha_deck_ns.class_("HaDeckClimateOption", automation.Trigger.template())
 HaDeckClimateGroup = ha_deck_ns.class_("HaDeckClimateGroup")
 HaDeckNavigationButton = ha_deck_ns.class_("HaDeckNavigationButton")
+HaDeckCamera = ha_deck_ns.class_("HaDeckCamera")
 ShowScreenAction = ha_deck_ns.class_("ShowScreenAction", automation.Action)
 SetThemeAction = ha_deck_ns.class_("SetThemeAction", automation.Action)
 
@@ -466,6 +472,45 @@ NAVIGATION_BUTTON_SCHEMA = cv.All(cv.Schema({
     cv.Optional(CONF_TIME, default="200ms"): cv.positive_time_period_milliseconds,
 }), _validate_navigation_button)
 
+def _validate_stream_url(value):
+    value = cv.string_strict(value)
+    parts = urlsplit(value)
+    if parts.scheme != "http":
+        raise cv.Invalid("Camera 'url' must use http://")
+    if not parts.hostname:
+        raise cv.Invalid("Camera 'url' must include a host")
+    if parts.username or parts.password:
+        raise cv.Invalid("Camera 'url' does not support credentials")
+    try:
+        parts.port
+    except ValueError as err:
+        raise cv.Invalid(f"Camera 'url' has an invalid port: {err}") from err
+    return value
+
+
+def _split_stream_url(value):
+    parts = urlsplit(value)
+    path = parts.path or "/"
+    if parts.query:
+        path += "?" + parts.query
+    return parts.hostname, parts.port or 80, path
+
+
+CAMERA_SCHEMA = cv.Schema({
+    cv.GenerateID(): cv.declare_id(HaDeckCamera),
+    cv.Required(CONF_X): cv.int_,
+    cv.Required(CONF_Y): cv.int_,
+    cv.Required(CONF_WIDTH): cv.positive_int,
+    cv.Required(CONF_HEIGHT): cv.positive_int,
+    cv.Optional(CONF_VISIBLE, default=True): cv.templatable(cv.boolean),
+    cv.Required(CONF_URL): _validate_stream_url,
+    cv.Optional(CONF_TIMEOUT, default="5min"): cv.positive_time_period_milliseconds,
+    cv.Optional(CONF_CONNECTING_TEXT, default="Connecting"): cv.string,
+    cv.Optional(CONF_ERROR_TEXT, default="No signal"): cv.string,
+    cv.Optional(CONF_PAUSED_TEXT, default="Paused"): cv.string,
+    cv.Optional(CONF_ON_CLICK): automation.validate_automation(single=True),
+})
+
 WIDGET_SCHEMA = cv.Any(
     cv.Schema({cv.Required(CONF_BUTTON): BUTTON_SCHEMA}),
     cv.Schema({cv.Required(CONF_SENSOR_VALUE): SENSOR_VALUE_SCHEMA}),
@@ -473,6 +518,7 @@ WIDGET_SCHEMA = cv.Any(
     cv.Schema({cv.Required(CONF_SLIDER): SLIDER_SCHEMA}),
     cv.Schema({cv.Required(CONF_CLIMATE): CLIMATE_SCHEMA}),
     cv.Schema({cv.Required(CONF_NAVIGATION_BUTTON): NAVIGATION_BUTTON_SCHEMA}),
+    cv.Schema({cv.Required(CONF_CAMERA): CAMERA_SCHEMA}),
 )
 SCREEN_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(HaDeckScreen),
@@ -546,6 +592,9 @@ def _register_lvgl_resources(config):
             if CONF_NAVIGATION_BUTTON in widget:
                 add_lv_use("label")
                 continue
+            if CONF_CAMERA in widget:
+                add_lv_use("image", "label")
+                continue
             if CONF_WEATHER in widget:
                 add_lv_use("image")
                 item = widget[CONF_WEATHER]
@@ -577,6 +626,20 @@ def _register_lvgl_resources(config):
                 if font_id := icon.get(CONF_FONT):
                     add_lv_use("label", "font")
                     get_esphome_fonts_used().add(font_id)
+    return config
+
+
+def _uses_camera(config):
+    return any(
+        CONF_CAMERA in widget
+        for screen in config[CONF_SCREENS]
+        for widget in screen[CONF_WIDGETS]
+    )
+
+
+def _validate_camera_platform(config):
+    if _uses_camera(config) and not (CORE.is_esp32 or CORE.is_host):
+        raise cv.Invalid("The camera widget is only supported on ESP32 and host platforms")
     return config
 
 
@@ -640,6 +703,7 @@ CONFIG_SCHEMA = cv.All(
         cv.Required(CONF_THEMES): cv.All(cv.ensure_list(THEME_SCHEMA), cv.Length(min=1)),
     }).extend(cv.polling_component_schema("100ms")),
     _validate_theme_font_defaults,
+    _validate_camera_platform,
     _register_lvgl_resources,
 )
 
@@ -923,6 +987,34 @@ async def _navigation_button_to_code(conf, screen, deck):
     cg.add(screen.add_widget(var))
 
 
+async def _camera_to_code(conf, screen):
+    var = cg.new_Pvariable(conf[CONF_ID])
+    cg.add(var.set_geometry(conf[CONF_X], conf[CONF_Y], conf[CONF_WIDTH], conf[CONF_HEIGHT]))
+    cg.add(var.set_visible(await cg.templatable(conf[CONF_VISIBLE], [], cg.bool_)))
+    host, port, path = _split_stream_url(conf[CONF_URL])
+    cg.add(var.set_endpoint(host, port, path))
+    cg.add(var.set_timeout(conf[CONF_TIMEOUT].total_milliseconds))
+    cg.add(var.set_connecting_text(conf[CONF_CONNECTING_TEXT]))
+    cg.add(var.set_error_text(conf[CONF_ERROR_TEXT]))
+    cg.add(var.set_paused_text(conf[CONF_PAUSED_TEXT]))
+    if CONF_ON_CLICK in conf:
+        await automation.build_automation(var.get_click_trigger(), [], conf[CONF_ON_CLICK])
+    cg.add(screen.add_widget(var))
+
+
+def _add_camera_dependencies():
+    cg.add_define("USE_HA_DECK_CAMERA")
+    cg.add_library("JPEGDEC", "1.8.4", "https://github.com/bitbank2/JPEGDEC#1.8.4")
+    if CORE.is_host:
+        # JPEGDEC selects its portable (non-Arduino) headers from this define.
+        cg.add_build_flag("-D__LINUX__")
+    if CORE.is_esp32:
+        from esphome.components.esp32 import add_idf_component
+
+        # Same dependency ESPHome's runtime_image adds for JPEGDEC's S3 SIMD path.
+        add_idf_component(name="espressif/esp-dsp", ref="1.7.1")
+
+
 async def _generate_weather_images(icon_size, asset_dir):
     entries = []
     result = {}
@@ -976,6 +1068,9 @@ async def to_code(config):
         else {}
     )
 
+    if _uses_camera(config):
+        _add_camera_dependencies()
+
     for conf in config[CONF_THEMES]:
         cg.add(deck.add_theme(await _theme_to_code(conf)))
 
@@ -1004,6 +1099,8 @@ async def to_code(config):
                 await _slider_to_code(widget[CONF_SLIDER], screen)
             elif CONF_CLIMATE in widget:
                 await _climate_to_code(widget[CONF_CLIMATE], screen)
+            elif CONF_CAMERA in widget:
+                await _camera_to_code(widget[CONF_CAMERA], screen)
             else:
                 await _navigation_button_to_code(widget[CONF_NAVIGATION_BUTTON], screen, deck)
 
