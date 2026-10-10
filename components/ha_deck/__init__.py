@@ -1002,17 +1002,23 @@ async def _camera_to_code(conf, screen):
     cg.add(screen.add_widget(var))
 
 
+JPEGDEC_IDF_REPO = "https://github.com/strange-v/jpegdec-esphome"
+JPEGDEC_IDF_REF = "d6dee1282535da1871d9c97c46537669719c51fd"
+
+
 def _add_camera_dependencies():
     cg.add_define("USE_HA_DECK_CAMERA")
+    if CORE.is_esp32:
+        from esphome.components.esp32 import add_idf_component
+
+        # Upstream JPEGDEC enables its ESP32-S3 SIMD path only under Arduino;
+        # this ESP-IDF component build of it enables SIMD on ESP-IDF as well.
+        add_idf_component(name="bitbank2/jpegdec", repo=JPEGDEC_IDF_REPO, ref=JPEGDEC_IDF_REF)
+        return
     cg.add_library("JPEGDEC", "1.8.4", "https://github.com/bitbank2/JPEGDEC#1.8.4")
     if CORE.is_host:
         # JPEGDEC selects its portable (non-Arduino) headers from this define.
         cg.add_build_flag("-D__LINUX__")
-    if CORE.is_esp32:
-        from esphome.components.esp32 import add_idf_component
-
-        # Same dependency ESPHome's runtime_image adds for JPEGDEC's S3 SIMD path.
-        add_idf_component(name="espressif/esp-dsp", ref="1.7.1")
 
 
 async def _generate_weather_images(icon_size, asset_dir):

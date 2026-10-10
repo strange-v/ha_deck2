@@ -13,7 +13,6 @@
 #include <strings.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -48,6 +47,25 @@ static constexpr uint32_t PRESENT_INTERVAL_MS = 10;
 static constexpr uint32_t STATS_INTERVAL_MS = 10000;
 static constexpr uint32_t RETRY_DELAYS_MS[] = {1000, 2000, 5000, 10000};
 static constexpr lv_opa_t STALE_FRAME_OPA = LV_OPA_40;
+
+template<typename F> static std::thread spawn_thread(const char *name, int priority, F &&body) {
+#ifdef USE_ESP32
+  esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+  cfg.stack_size = 6144;
+  cfg.prio = priority;
+  cfg.thread_name = name;
+#if !CONFIG_FREERTOS_UNICORE
+  cfg.pin_to_core = 0;
+#endif
+  esp_pthread_set_cfg(&cfg);
+  std::thread thread(std::forward<F>(body));
+  esp_pthread_cfg_t restore = esp_pthread_get_default_config();
+  esp_pthread_set_cfg(&restore);
+  return thread;
+#else
+  return std::thread(std::forward<F>(body));
+#endif
+}
 
 void HaDeckCamera::mount(lv_obj_t *parent, HaDeckTheme *theme) {
   this->root_ = lv_obj_create(parent);
@@ -151,11 +169,17 @@ bool HaDeckCamera::allocate_buffers_() {
     }
     memset(buffer, 0, frame_size);
   }
-  this->frame_data_ = allocator.allocate(MAX_FRAME_SIZE);
+  for (auto &slot : this->jpeg_slots_) {
+    slot = allocator.allocate(MAX_FRAME_SIZE);
+    if (slot == nullptr) {
+      ESP_LOGE(TAG, "Unable to allocate camera stream buffers");
+      return false;
+    }
+  }
   RAMAllocator<uint8_t> internal(RAMAllocator<uint8_t>::ALLOC_INTERNAL);
   this->rx_ = internal.allocate(RX_BUFFER_SIZE);
   this->jpeg_ = new JPEGDEC();  // NOLINT(cppcoreguidelines-owning-memory)
-  if (this->frame_data_ == nullptr || this->rx_ == nullptr || this->jpeg_ == nullptr) {
+  if (this->rx_ == nullptr || this->jpeg_ == nullptr) {
     ESP_LOGE(TAG, "Unable to allocate camera stream buffers");
     return false;
   }
@@ -181,27 +205,21 @@ void HaDeckCamera::start_stream_() {
   this->streaming_ = true;
   this->has_frame_ = false;
   this->state_ = State::CONNECTING;
+  // Frames already queued from an earlier session must not be shown.
+  this->session_++;
+  {
+    std::lock_guard<std::mutex> lock(this->frame_mutex_);
+    this->fresh_ = false;
+  }
   {
     std::lock_guard<std::mutex> lock(this->control_mutex_);
     this->active_ = true;
   }
   if (!this->worker_.joinable()) {
-#ifdef USE_ESP32
-    // Keep decoding off the ESPHome/LVGL loop core and below network priority.
-    esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 6144;
-    cfg.prio = 2;
-    cfg.thread_name = "ha_deck_cam";
-#if !CONFIG_FREERTOS_UNICORE
-    cfg.pin_to_core = 0;
-#endif
-    esp_pthread_set_cfg(&cfg);
-#endif
-    this->worker_ = std::thread([this]() { this->worker_loop_(); });
-#ifdef USE_ESP32
-    esp_pthread_cfg_t restore = esp_pthread_get_default_config();
-    esp_pthread_set_cfg(&restore);
-#endif
+    // Both threads stay off the ESPHome/LVGL loop core. The receiver runs above
+    // the decoder so the socket keeps draining while a frame is being decoded.
+    this->worker_ = spawn_thread("ha_deck_cam_rx", 3, [this]() { this->worker_loop_(); });
+    this->decoder_ = spawn_thread("ha_deck_cam_dec", 1, [this]() { this->decoder_loop_(); });
   }
   this->control_cv_.notify_all();
 }
@@ -292,7 +310,7 @@ void HaDeckCamera::event_callback_(lv_event_t *event) {
 }
 
 // ---------------------------------------------------------------------------
-// Worker thread
+// Receiver thread
 // ---------------------------------------------------------------------------
 
 void HaDeckCamera::wait_(uint32_t ms) {
@@ -457,14 +475,6 @@ bool HaDeckCamera::read_exact_(uint8_t *dst, size_t size) {
   return true;
 }
 
-size_t HaDeckCamera::pending_bytes_() {
-  int available = 0;
-  const int fd = this->socket_.load();
-  if (fd >= 0 && ioctl(fd, FIONREAD, &available) != 0)
-    available = 0;
-  return (this->rx_len_ - this->rx_pos_) + static_cast<size_t>(std::max(available, 0));
-}
-
 static bool starts_with_ci(const std::string &value, const char *prefix) {
   const size_t length = strlen(prefix);
   return value.size() >= length && strncasecmp(value.c_str(), prefix, length) == 0;
@@ -498,19 +508,7 @@ void HaDeckCamera::run_session_() {
   }
   ESP_LOGD(TAG, "Connected");
 
-  uint32_t stats_started = millis();
-  uint32_t decoded = 0;
-  uint32_t skipped = 0;
-  uint32_t decode_ms = 0;
   while (this->active_) {
-    if (millis() - stats_started >= STATS_INTERVAL_MS) {
-      const uint32_t elapsed = millis() - stats_started;
-      ESP_LOGD(TAG, "%.1f fps, %u skipped, %u ms/decode", decoded * 1000.0f / elapsed, static_cast<unsigned>(skipped),
-               static_cast<unsigned>(decoded > 0 ? decode_ms / decoded : 0));
-      stats_started = millis();
-      decoded = skipped = decode_ms = 0;
-    }
-
     // Part headers follow the boundary line; only Content-Length matters.
     size_t length = 0;
     bool in_headers = false;
@@ -531,21 +529,76 @@ void HaDeckCamera::run_session_() {
       ESP_LOGW(TAG, "Unsupported frame length %u", static_cast<unsigned>(length));
       return;
     }
-    if (!this->read_exact_(this->frame_data_, length))
+    if (!this->read_exact_(this->jpeg_slots_[this->jpeg_rx_], length))
       return;
+    this->publish_jpeg_(length);
+  }
+}
 
-    // Show the newest picture rather than queueing: if another complete frame
-    // is already waiting, skip decoding this one.
-    if (this->pending_bytes_() > length) {
-      skipped++;
-      continue;
+void HaDeckCamera::publish_jpeg_(size_t size) {
+  {
+    std::lock_guard<std::mutex> lock(this->jpeg_mutex_);
+    this->jpeg_sizes_[this->jpeg_rx_] = size;
+    this->jpeg_sessions_[this->jpeg_rx_] = this->session_.load();
+    // An undecoded JPEG in the latest slot is replaced: only the newest counts.
+    if (this->jpeg_fresh_)
+      this->jpeg_overwritten_++;
+    this->jpeg_received_++;
+    std::swap(this->jpeg_rx_, this->jpeg_latest_);
+    this->jpeg_fresh_ = true;
+  }
+  this->jpeg_cv_.notify_one();
+}
+
+// ---------------------------------------------------------------------------
+// Decoder thread
+// ---------------------------------------------------------------------------
+
+void HaDeckCamera::decoder_loop_() {
+  uint32_t stats_started = millis();
+  uint32_t decoded = 0;
+  uint32_t decode_ms = 0;
+  while (true) {
+    size_t size = 0;
+    uint32_t session = 0;
+    {
+      std::unique_lock<std::mutex> lock(this->jpeg_mutex_);
+      this->jpeg_cv_.wait_for(lock, std::chrono::milliseconds(1000), [this]() { return this->jpeg_fresh_; });
+      if (this->jpeg_fresh_) {
+        std::swap(this->jpeg_decode_, this->jpeg_latest_);
+        this->jpeg_fresh_ = false;
+        size = this->jpeg_sizes_[this->jpeg_decode_];
+        session = this->jpeg_sessions_[this->jpeg_decode_];
+      }
     }
-    const uint32_t started = millis();
-    if (!this->decode_frame_(length))
-      continue;
-    decode_ms += millis() - started;
-    decoded++;
-    this->state_ = State::STREAMING;
+
+    if (size > 0 && this->active_ && session == this->session_.load()) {
+      const uint32_t started = millis();
+      if (this->decode_frame_(this->jpeg_slots_[this->jpeg_decode_], size)) {
+        decode_ms += millis() - started;
+        decoded++;
+        this->state_ = State::STREAMING;
+      }
+    }
+
+    const uint32_t elapsed = millis() - stats_started;
+    if (elapsed >= STATS_INTERVAL_MS) {
+      uint32_t received;
+      uint32_t overwritten;
+      {
+        std::lock_guard<std::mutex> lock(this->jpeg_mutex_);
+        received = this->jpeg_received_;
+        overwritten = this->jpeg_overwritten_;
+        this->jpeg_received_ = this->jpeg_overwritten_ = 0;
+      }
+      if (received > 0) {
+        ESP_LOGD(TAG, "%.1f fps decoded, %.1f fps received, %u dropped, %u ms/decode", decoded * 1000.0f / elapsed,
+                 received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
+                 static_cast<unsigned>(decoded > 0 ? decode_ms / decoded : 0));
+      }
+      stats_started = millis();
+      decoded = decode_ms = 0;
+    }
   }
 }
 
@@ -569,8 +622,8 @@ int HaDeckCamera::draw_callback_(JPEGDRAW *draw) {
   return 1;
 }
 
-bool HaDeckCamera::decode_frame_(size_t size) {
-  if (!this->jpeg_->openRAM(this->frame_data_, static_cast<int>(size), HaDeckCamera::draw_callback_)) {
+bool HaDeckCamera::decode_frame_(const uint8_t *data, size_t size) {
+  if (!this->jpeg_->openRAM(const_cast<uint8_t *>(data), static_cast<int>(size), HaDeckCamera::draw_callback_)) {
     ESP_LOGW(TAG, "Invalid JPEG frame (error %d)", this->jpeg_->getLastError());
     return false;
   }

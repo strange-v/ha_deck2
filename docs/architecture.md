@@ -75,9 +75,9 @@ Icon glyphs intentionally have no built-in font. A user must provide a local fon
 
 ## Camera stream
 
-`HaDeckCamera` owns one background thread (a pinned pthread on ESP32, `std::thread` on host) that is created on first use and then sleeps while the stream is inactive. The thread reads an HTTP/1.0 `multipart/x-mixed-replace` response with BSD sockets, decodes each part with JPEGDEC into RGB565, and publishes it through triple buffering: LVGL owns the front buffer, the worker owns the back buffer, and the newest completed frame waits in the third until an LVGL timer swaps it in. The worker never waits for LVGL, and a frame is skipped when a newer one is already buffered, so latency does not accumulate.
+`HaDeckCamera` owns two background threads (pinned pthreads on ESP32, `std::thread` on host) that are created on first use and then sleep while the stream is inactive. The receiver reads an HTTP/1.0 `multipart/x-mixed-replace` response with BSD sockets and stores each complete JPEG in the newest of three compressed slots, replacing an undecoded one. The decoder takes only the newest JPEG, decodes it with JPEGDEC into RGB565, and publishes it through triple buffering: LVGL owns the front buffer, the decoder owns the back buffer, and the newest completed frame waits in the third until an LVGL timer swaps it in. Receiving never waits for decoding, so the socket never applies backpressure and the server cannot build a queue of stale frames; when frames arrive faster than they can be decoded or shown, the extra ones are dropped on the device.
 
-The stream runs only while the widget is mounted, shown, visible, and not paused. Stopping clears the active flag and shuts the socket down to unblock the receive call; the thread itself is kept. Frame buffers are allocated once, preferably in PSRAM, and retained.
+The stream runs only while the widget is mounted, shown, visible, and not paused. Stopping clears the active flag and shuts the socket down to unblock the receive call; the thread itself is kept. Frame and JPEG buffers are allocated once, preferably in PSRAM, and retained. Frames received in an earlier session are discarded so that a resumed stream never shows an old picture.
 
 The camera code and its JPEGDEC dependency are compiled only when a configuration uses the widget (`USE_HA_DECK_CAMERA`).
 

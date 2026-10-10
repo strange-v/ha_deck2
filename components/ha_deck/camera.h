@@ -20,10 +20,12 @@ struct jpeg_draw_tag;
 
 namespace esphome::ha_deck {
 
-// Full-frame MJPEG viewer. A background thread reads a multipart/x-mixed-replace
-// HTTP stream, decodes each JPEG into one of three RGB565 buffers, and the LVGL
-// thread always shows the newest completed frame. The stream is open only while
-// the owning screen is active, the widget is visible, and the viewer is not paused.
+// Full-frame MJPEG viewer. A receiver thread drains a multipart/x-mixed-replace
+// HTTP stream into the newest-JPEG slot, a decoder thread turns the newest JPEG
+// into one of three RGB565 buffers, and the LVGL thread shows the newest frame.
+// Receiving never waits for decoding, so the server never queues stale frames.
+// The stream is open only while the owning screen is active, the widget is
+// visible, and the viewer is not paused.
 class HaDeckCamera : public HaDeckWidget {
  public:
   void set_geometry(int16_t x, int16_t y, uint16_t width, uint16_t height) {
@@ -68,7 +70,7 @@ class HaDeckCamera : public HaDeckWidget {
   void render_status_(bool force);
   bool allocate_buffers_();
 
-  // Worker thread.
+  // Receiver thread.
   void worker_loop_();
   void run_session_();
   bool connect_();
@@ -76,9 +78,12 @@ class HaDeckCamera : public HaDeckWidget {
   bool fill_();
   bool read_line_(std::string &line);
   bool read_exact_(uint8_t *dst, size_t size);
-  size_t pending_bytes_();
-  bool decode_frame_(size_t size);
+  void publish_jpeg_(size_t size);
   void wait_(uint32_t ms);
+
+  // Decoder thread.
+  void decoder_loop_();
+  bool decode_frame_(const uint8_t *data, size_t size);
 
   int16_t x_{0};
   int16_t y_{0};
@@ -118,14 +123,29 @@ class HaDeckCamera : public HaDeckWidget {
   std::mutex frame_mutex_{};
 
   std::thread worker_{};
+  std::thread decoder_{};
+  std::atomic<uint32_t> session_{0};
   std::mutex control_mutex_{};
   std::condition_variable control_cv_{};
   std::atomic<bool> active_{false};
   std::atomic<State> state_{State::IDLE};
   std::atomic<int> socket_{-1};
 
+  // Same scheme for compressed frames: the receiver owns jpeg_rx_, the decoder
+  // owns jpeg_decode_, and jpeg_latest_ holds the newest complete JPEG.
+  uint8_t *jpeg_slots_[3]{nullptr, nullptr, nullptr};
+  size_t jpeg_sizes_[3]{0, 0, 0};
+  uint32_t jpeg_sessions_[3]{0, 0, 0};
+  uint8_t jpeg_rx_{0};
+  uint8_t jpeg_latest_{1};
+  uint8_t jpeg_decode_{2};
+  bool jpeg_fresh_{false};
+  uint32_t jpeg_received_{0};
+  uint32_t jpeg_overwritten_{0};
+  std::mutex jpeg_mutex_{};
+  std::condition_variable jpeg_cv_{};
+
   JPEGDEC *jpeg_{nullptr};
-  uint8_t *frame_data_{nullptr};
   uint8_t *rx_{nullptr};
   size_t rx_pos_{0};
   size_t rx_len_{0};

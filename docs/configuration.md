@@ -296,9 +296,9 @@ The `power` object supports:
 
 Status texts use the theme's `text_small` font, so their glyphs must be included in that font.
 
-Frames are centered: smaller frames are letterboxed in black, larger frames are cropped. For the best frame rate, let the server produce exactly the widget size, so the device only decodes and copies. The decoder keeps only the newest frame; if frames arrive faster than they can be shown, older ones are skipped.
+Frames are centered: smaller frames are letterboxed in black, larger frames are cropped. For the best frame rate, let the server produce exactly the widget size, so the device only decodes and copies. The widget keeps reading the stream while it decodes and always decodes the newest frame, so the picture does not fall behind when the server sends more frames than the device can show; the extra frames are dropped.
 
-The widget needs about three RGB565 frame buffers (`width × height × 2` bytes each) plus a 128 KiB JPEG buffer, so PSRAM is required for full-screen use on ESP32. It is supported on ESP32 and the host (SDL) platform.
+The widget needs about three RGB565 frame buffers (`width × height × 2` bytes each) plus three 128 KiB JPEG buffers, so PSRAM is required for full-screen use on ESP32. It is supported on ESP32 and the host (SDL) platform.
 
 An example go2rtc configuration that uses Intel VA-API for decoding and scaling:
 
