@@ -152,7 +152,6 @@ class HaDeckCamera : public HaDeckWidget {
   uint32_t last_data_at_{0};
   int16_t draw_offset_x_{0};
   int16_t draw_offset_y_{0};
-  uint32_t copy_us_{0};
 };
 
 }  // namespace esphome::ha_deck

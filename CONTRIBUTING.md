@@ -25,6 +25,7 @@ cd /path/to/ha_deck2
 source "$HOME/esphome-venv/bin/activate"
 export PLATFORMIO_CORE_DIR=/tmp/ha_deck2-platformio
 export ESPHOME_CACHE_DIR=/tmp/ha_deck2-cache
+export ESPHOME_DATA_DIR=/tmp/ha_deck2-data
 esphome compile tests/validate.yaml
 ```
 
@@ -36,7 +37,7 @@ esphome compile tests/validate_720.yaml
 
 This fixture starts on the climate screen at 720x720 and uses larger theme metrics and weather assets so responsive composite layout paths are exercised.
 
-The YAML files also set `esphome.build_path` below `/tmp/esphome`.
+The YAML files also set `esphome.build_path` below `/tmp/esphome`. `ESPHOME_DATA_DIR` matters for ESP32 builds: without it ESPHome keeps the ESP-IDF component cache in `.esphome` next to the YAML on the mounted Windows drive, and the component manager step can stall for many minutes.
 
 ## Run the visual dashboard
 
@@ -45,6 +46,7 @@ cd /path/to/ha_deck2
 source "$HOME/esphome-venv/bin/activate"
 export PLATFORMIO_CORE_DIR=/tmp/ha_deck2-platformio
 export ESPHOME_CACHE_DIR=/tmp/ha_deck2-cache
+export ESPHOME_DATA_DIR=/tmp/ha_deck2-data
 set -a
 source .env
 set +a

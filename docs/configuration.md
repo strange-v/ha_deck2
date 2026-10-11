@@ -300,6 +300,13 @@ Frames are centered: smaller frames are letterboxed in black, larger frames are 
 
 The widget needs about three RGB565 frame buffers (`width × height × 2` bytes each) plus three 128 KiB JPEG buffers, so PSRAM is required for full-screen use on ESP32. It is supported on ESP32 and the host (SDL) platform.
 
+Performance notes:
+
+- On an ESP32-S3 with a 480x480 RGB panel, decoding a full-screen frame takes about 50 ms, which shows about 10 fps from a 12 fps camera. The decoder time depends mostly on the frame size in pixels, not on JPEG quality.
+- Set `power_save_mode: none` under `wifi`. With Wi-Fi power saving, frames arrive in bursts and more of them are dropped.
+- Frame statistics (decoded, received, and dropped frames per second and decode time) are logged every 10 seconds at `VERBOSE` level under the `ha_deck.camera` tag.
+- On ESP32 the widget uses the [jpegdec-esphome](https://github.com/strange-v/jpegdec-esphome) ESP-IDF component, a build of JPEGDEC with ESP32-S3 SIMD enabled. Another component that links its own copy of JPEGDEC, such as ESPHome's `online_image` with JPEG support, may conflict with it.
+
 An example go2rtc configuration that uses Intel VA-API for decoding and scaling:
 
 ```yaml
