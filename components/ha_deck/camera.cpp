@@ -557,7 +557,8 @@ void HaDeckCamera::publish_jpeg_(size_t size) {
 void HaDeckCamera::decoder_loop_() {
   uint32_t stats_started = millis();
   uint32_t decoded = 0;
-  uint32_t decode_ms = 0;
+  uint32_t decode_us = 0;
+  uint32_t copy_us = 0;
   while (true) {
     size_t size = 0;
     uint32_t session = 0;
@@ -573,9 +574,11 @@ void HaDeckCamera::decoder_loop_() {
     }
 
     if (size > 0 && this->active_ && session == this->session_.load()) {
-      const uint32_t started = millis();
+      const uint32_t started = micros();
+      this->copy_us_ = 0;
       if (this->decode_frame_(this->jpeg_slots_[this->jpeg_decode_], size)) {
-        decode_ms += millis() - started;
+        decode_us += micros() - started;
+        copy_us += this->copy_us_;
         decoded++;
         this->state_ = State::STREAMING;
       }
@@ -592,18 +595,20 @@ void HaDeckCamera::decoder_loop_() {
         this->jpeg_received_ = this->jpeg_overwritten_ = 0;
       }
       if (received > 0) {
-        ESP_LOGD(TAG, "%.1f fps decoded, %.1f fps received, %u dropped, %u ms/decode", decoded * 1000.0f / elapsed,
-                 received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
-                 static_cast<unsigned>(decoded > 0 ? decode_ms / decoded : 0));
+        // Copy time is the part of a decode spent writing pixels into the frame buffer.
+        ESP_LOGD(TAG, "%.1f fps decoded, %.1f fps received, %u dropped, %.1f ms/decode (%.1f ms copy)",
+                 decoded * 1000.0f / elapsed, received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
+                 decoded > 0 ? decode_us / 1000.0f / decoded : 0.0f, decoded > 0 ? copy_us / 1000.0f / decoded : 0.0f);
       }
       stats_started = millis();
-      decoded = decode_ms = 0;
+      decoded = decode_us = copy_us = 0;
     }
   }
 }
 
 int HaDeckCamera::draw_callback_(JPEGDRAW *draw) {
   auto *camera = static_cast<HaDeckCamera *>(draw->pUser);
+  const uint32_t started = micros();
   const int width = camera->width_;
   const int height = camera->height_;
   const int dst_x = draw->x + camera->draw_offset_x_;
@@ -619,6 +624,7 @@ int HaDeckCamera::draw_callback_(JPEGDRAW *draw) {
     memcpy(target + dst_y * width + x0, draw->pPixels + row * draw->iWidth + (x0 - dst_x),
            static_cast<size_t>(x1 - x0) * sizeof(uint16_t));
   }
+  camera->copy_us_ += micros() - started;
   return 1;
 }
 
