@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <new>
 
 #include <fcntl.h>
 #include <netdb.h>
@@ -178,7 +179,12 @@ bool HaDeckCamera::allocate_buffers_() {
   }
   RAMAllocator<uint8_t> internal(RAMAllocator<uint8_t>::ALLOC_INTERNAL);
   this->rx_ = internal.allocate(RX_BUFFER_SIZE);
-  this->jpeg_ = new JPEGDEC();  // NOLINT(cppcoreguidelines-owning-memory)
+  // The decoder's Huffman tables and MCU buffers are its hot data. At ~18 KiB the
+  // object is above ESP-IDF's default internal-malloc limit, so a plain new
+  // would put it in PSRAM and roughly halve decoding speed.
+  uint8_t *decoder_memory = internal.allocate(sizeof(JPEGDEC));
+  if (decoder_memory != nullptr)
+    this->jpeg_ = new (decoder_memory) JPEGDEC();
   if (this->rx_ == nullptr || this->jpeg_ == nullptr) {
     ESP_LOGE(TAG, "Unable to allocate camera stream buffers");
     return false;
