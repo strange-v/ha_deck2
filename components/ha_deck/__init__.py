@@ -1047,7 +1047,8 @@ async def _generate_weather_images(icon_size, asset_dir):
     else:
         for entry in entries:
             entry = file_image.CONFIG_SCHEMA(entry)
-            entry = file_image.FINAL_VALIDATE_SCHEMA(entry)
+            # Final validation mutates the entry in place and may return None.
+            file_image.FINAL_VALIDATE_SCHEMA(entry)
             await file_image.to_code(entry)
     return result
 

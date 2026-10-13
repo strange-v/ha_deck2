@@ -1,8 +1,11 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
 import esphome.config_validation as cv
+import components.ha_deck as ha_deck
 
 from components.ha_deck import (
     CONF_ACTION_HEIGHT,
@@ -258,6 +261,37 @@ class WeatherIconDirectoryValidationTest(unittest.TestCase):
             self.assertIn("clear-night.svg", message)
             self.assertIn("windy-variant.svg", message)
             self.assertNotIn("clear-day.svg", message)
+
+
+class WeatherImageGenerationTest(unittest.IsolatedAsyncioTestCase):
+    async def test_final_validation_preserves_config_for_codegen(self):
+        for returns_config in (False, True):
+            with self.subTest(returns_config=returns_config):
+                validated_entries = []
+
+                def validate_final(entry):
+                    entry["byte_order"] = "LITTLE_ENDIAN"
+                    validated_entries.append(entry)
+                    return entry if returns_config else None
+
+                platform = SimpleNamespace(
+                    CONFIG_SCHEMA=Mock(side_effect=lambda entry: dict(entry)),
+                    FINAL_VALIDATE_SCHEMA=Mock(side_effect=validate_final),
+                    to_code=AsyncMock(),
+                )
+                asset_dir = Path("weather-assets")
+                with patch.object(ha_deck, "file_image", platform):
+                    images = await ha_deck._generate_weather_images(64, asset_dir)
+
+                self.assertEqual(set(images), set(WEATHER_CONDITIONS))
+                self.assertEqual(platform.to_code.await_count, len(WEATHER_CONDITIONS))
+                for condition, entry, call in zip(
+                    WEATHER_CONDITIONS, validated_entries, platform.to_code.await_args_list
+                ):
+                    self.assertIs(call.args[0], entry)
+                    self.assertEqual(entry[ha_deck.CONF_FILE], str(asset_dir / f"{condition}.svg"))
+                    self.assertIs(entry[CONF_ID], images[condition])
+                    self.assertEqual(entry["byte_order"], "LITTLE_ENDIAN")
 
 
 if __name__ == "__main__":
