@@ -149,6 +149,11 @@ class HaDeckCamera : public HaDeckWidget {
   // Written by the LVGL thread, read and reset by the decoder's statistics.
   uint32_t present_last_at_{0};
   std::atomic<uint32_t> present_max_gap_{0};
+  bool present_stall_reported_{false};
+  // Times of the newest received and decoded frames, read by the LVGL thread
+  // to tell which stage a frozen picture is stuck in.
+  std::atomic<uint32_t> received_at_{0};
+  std::atomic<uint32_t> decoded_at_{0};
   std::mutex jpeg_mutex_{};
   std::condition_variable jpeg_cv_{};
 

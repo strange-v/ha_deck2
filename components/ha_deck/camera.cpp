@@ -46,6 +46,7 @@ static constexpr uint32_t STALL_TIMEOUT_MS = 5000;
 static constexpr uint32_t RECEIVE_POLL_MS = 200;
 static constexpr uint32_t PRESENT_INTERVAL_MS = 10;
 static constexpr uint32_t STATS_INTERVAL_MS = 10000;
+static constexpr uint32_t STALL_REPORT_MS = 1000;
 static constexpr uint32_t RETRY_DELAYS_MS[] = {1000, 2000, 5000, 10000};
 static constexpr lv_opa_t STALE_FRAME_OPA = LV_OPA_40;
 
@@ -257,8 +258,18 @@ void HaDeckCamera::present_frame_() {
     return;
   {
     std::lock_guard<std::mutex> lock(this->frame_mutex_);
-    if (!this->fresh_)
+    if (!this->fresh_) {
+      const uint32_t now = millis();
+      if (this->present_last_at_ != 0 && !this->present_stall_reported_ &&
+          now - this->present_last_at_ >= STALL_REPORT_MS) {
+        this->present_stall_reported_ = true;
+        ESP_LOGW(TAG, "No new frame shown for %u ms; last received %u ms ago, last decoded %u ms ago",
+                 static_cast<unsigned>(now - this->present_last_at_),
+                 static_cast<unsigned>(now - this->received_at_.load()),
+                 static_cast<unsigned>(now - this->decoded_at_.load()));
+      }
       return;
+    }
     std::swap(this->front_, this->latest_);
     this->fresh_ = false;
   }
@@ -271,7 +282,10 @@ void HaDeckCamera::present_frame_() {
     const uint32_t gap = now - this->present_last_at_;
     if (gap > this->present_max_gap_.load())
       this->present_max_gap_ = gap;
+    if (this->present_stall_reported_)
+      ESP_LOGW(TAG, "Picture resumed after %u ms", static_cast<unsigned>(gap));
   }
+  this->present_stall_reported_ = false;
   this->present_last_at_ = now;
   if (!this->has_frame_) {
     this->has_frame_ = true;
@@ -569,6 +583,7 @@ void HaDeckCamera::publish_jpeg_(size_t size) {
     if (this->jpeg_last_at_ != 0)
       this->jpeg_max_gap_ = std::max(this->jpeg_max_gap_, now - this->jpeg_last_at_);
     this->jpeg_last_at_ = now;
+    this->received_at_ = now;
     std::swap(this->jpeg_rx_, this->jpeg_latest_);
     this->jpeg_fresh_ = true;
   }
@@ -685,6 +700,7 @@ bool HaDeckCamera::decode_frame_(const uint8_t *data, size_t size) {
     return false;
   }
 
+  this->decoded_at_ = millis();
   std::lock_guard<std::mutex> lock(this->frame_mutex_);
   std::swap(this->back_, this->latest_);
   this->fresh_ = true;
