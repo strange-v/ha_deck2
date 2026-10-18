@@ -144,6 +144,11 @@ class HaDeckCamera : public HaDeckWidget {
   uint32_t jpeg_overwritten_{0};
   uint32_t jpeg_bytes_{0};
   uint32_t jpeg_max_size_{0};
+  uint32_t jpeg_last_at_{0};
+  uint32_t jpeg_max_gap_{0};
+  // Written by the LVGL thread, read and reset by the decoder's statistics.
+  uint32_t present_last_at_{0};
+  std::atomic<uint32_t> present_max_gap_{0};
   std::mutex jpeg_mutex_{};
   std::condition_variable jpeg_cv_{};
 

@@ -210,6 +210,7 @@ void HaDeckCamera::start_stream_() {
   ESP_LOGD(TAG, "Starting stream from %s:%u%s", this->host_.c_str(), this->port_, this->path_.c_str());
   this->streaming_ = true;
   this->has_frame_ = false;
+  this->present_last_at_ = 0;
   this->state_ = State::CONNECTING;
   // Frames already queued from an earlier session must not be shown.
   this->session_++;
@@ -265,6 +266,13 @@ void HaDeckCamera::present_frame_() {
   lv_image_cache_drop(dsc);
   lv_image_set_src(this->image_, dsc);
   lv_obj_invalidate(this->image_);
+  const uint32_t now = millis();
+  if (this->present_last_at_ != 0) {
+    const uint32_t gap = now - this->present_last_at_;
+    if (gap > this->present_max_gap_.load())
+      this->present_max_gap_ = gap;
+  }
+  this->present_last_at_ = now;
   if (!this->has_frame_) {
     this->has_frame_ = true;
     this->render_status_(false);
@@ -514,6 +522,10 @@ void HaDeckCamera::run_session_() {
     return;
   }
   ESP_LOGI(TAG, "Connected");
+  {
+    std::lock_guard<std::mutex> lock(this->jpeg_mutex_);
+    this->jpeg_last_at_ = 0;
+  }
 
   while (this->active_) {
     // Part headers follow the boundary line; only Content-Length matters.
@@ -553,6 +565,10 @@ void HaDeckCamera::publish_jpeg_(size_t size) {
     this->jpeg_received_++;
     this->jpeg_bytes_ += size;
     this->jpeg_max_size_ = std::max(this->jpeg_max_size_, static_cast<uint32_t>(size));
+    const uint32_t now = millis();
+    if (this->jpeg_last_at_ != 0)
+      this->jpeg_max_gap_ = std::max(this->jpeg_max_gap_, now - this->jpeg_last_at_);
+    this->jpeg_last_at_ = now;
     std::swap(this->jpeg_rx_, this->jpeg_latest_);
     this->jpeg_fresh_ = true;
   }
@@ -596,21 +612,26 @@ void HaDeckCamera::decoder_loop_() {
       uint32_t overwritten;
       uint32_t bytes;
       uint32_t max_size;
+      uint32_t rx_gap;
       {
         std::lock_guard<std::mutex> lock(this->jpeg_mutex_);
         received = this->jpeg_received_;
         overwritten = this->jpeg_overwritten_;
         bytes = this->jpeg_bytes_;
         max_size = this->jpeg_max_size_;
+        rx_gap = this->jpeg_max_gap_;
         this->jpeg_received_ = this->jpeg_overwritten_ = this->jpeg_bytes_ = this->jpeg_max_size_ = 0;
+        this->jpeg_max_gap_ = 0;
       }
+      const uint32_t present_gap = this->present_max_gap_.exchange(0);
       if (received > 0) {
         ESP_LOGD(TAG,
                  "%.1f fps decoded, %.1f fps received, %u dropped, %.1f ms/decode, %.1f KiB avg, %.1f KiB max, "
-                 "%.0f KiB/s",
+                 "%.0f KiB/s, max gap %u ms rx / %u ms shown",
                  decoded * 1000.0f / elapsed, received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
                  decoded > 0 ? decode_us / 1000.0f / decoded : 0.0f, bytes / 1024.0f / received, max_size / 1024.0f,
-                 bytes * 1000.0f / 1024.0f / elapsed);
+                 bytes * 1000.0f / 1024.0f / elapsed, static_cast<unsigned>(rx_gap),
+                 static_cast<unsigned>(present_gap));
       }
       stats_started = millis();
       decoded = decode_us = 0;
