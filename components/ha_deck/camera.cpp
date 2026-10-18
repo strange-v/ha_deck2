@@ -342,6 +342,7 @@ void HaDeckCamera::worker_loop_() {
     this->state_ = State::ERROR;
     const size_t index = std::min(failures, sizeof(RETRY_DELAYS_MS) / sizeof(RETRY_DELAYS_MS[0]) - 1);
     failures++;
+    ESP_LOGI(TAG, "Reconnecting in %u ms", static_cast<unsigned>(RETRY_DELAYS_MS[index]));
     this->wait_(RETRY_DELAYS_MS[index]);
   }
 }
@@ -442,7 +443,7 @@ bool HaDeckCamera::fill_() {
     if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
       return false;
     if (millis() - this->last_data_at_ >= STALL_TIMEOUT_MS) {
-      ESP_LOGW(TAG, "Stream stalled");
+      ESP_LOGI(TAG, "Stream stalled");
       return false;
     }
   }
@@ -512,7 +513,7 @@ void HaDeckCamera::run_session_() {
     ESP_LOGW(TAG, "Response is not a multipart MJPEG stream");
     return;
   }
-  ESP_LOGD(TAG, "Connected");
+  ESP_LOGI(TAG, "Connected");
 
   while (this->active_) {
     // Part headers follow the boundary line; only Content-Length matters.
@@ -532,7 +533,7 @@ void HaDeckCamera::run_session_() {
         length = static_cast<size_t>(strtoul(line.c_str() + 15, nullptr, 10));
     }
     if (length == 0 || length > MAX_FRAME_SIZE) {
-      ESP_LOGW(TAG, "Unsupported frame length %u", static_cast<unsigned>(length));
+      ESP_LOGE(TAG, "Unsupported frame length %u", static_cast<unsigned>(length));
       return;
     }
     if (!this->read_exact_(this->jpeg_slots_[this->jpeg_rx_], length))
@@ -550,6 +551,8 @@ void HaDeckCamera::publish_jpeg_(size_t size) {
     if (this->jpeg_fresh_)
       this->jpeg_overwritten_++;
     this->jpeg_received_++;
+    this->jpeg_bytes_ += size;
+    this->jpeg_max_size_ = std::max(this->jpeg_max_size_, static_cast<uint32_t>(size));
     std::swap(this->jpeg_rx_, this->jpeg_latest_);
     this->jpeg_fresh_ = true;
   }
@@ -591,16 +594,23 @@ void HaDeckCamera::decoder_loop_() {
     if (elapsed >= STATS_INTERVAL_MS) {
       uint32_t received;
       uint32_t overwritten;
+      uint32_t bytes;
+      uint32_t max_size;
       {
         std::lock_guard<std::mutex> lock(this->jpeg_mutex_);
         received = this->jpeg_received_;
         overwritten = this->jpeg_overwritten_;
-        this->jpeg_received_ = this->jpeg_overwritten_ = 0;
+        bytes = this->jpeg_bytes_;
+        max_size = this->jpeg_max_size_;
+        this->jpeg_received_ = this->jpeg_overwritten_ = this->jpeg_bytes_ = this->jpeg_max_size_ = 0;
       }
       if (received > 0) {
-        ESP_LOGV(TAG, "%.1f fps decoded, %.1f fps received, %u dropped, %.1f ms/decode", decoded * 1000.0f / elapsed,
-                 received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
-                 decoded > 0 ? decode_us / 1000.0f / decoded : 0.0f);
+        ESP_LOGD(TAG,
+                 "%.1f fps decoded, %.1f fps received, %u dropped, %.1f ms/decode, %.1f KiB avg, %.1f KiB max, "
+                 "%.0f KiB/s",
+                 decoded * 1000.0f / elapsed, received * 1000.0f / elapsed, static_cast<unsigned>(overwritten),
+                 decoded > 0 ? decode_us / 1000.0f / decoded : 0.0f, bytes / 1024.0f / received, max_size / 1024.0f,
+                 bytes * 1000.0f / 1024.0f / elapsed);
       }
       stats_started = millis();
       decoded = decode_us = 0;

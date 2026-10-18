@@ -142,6 +142,8 @@ class HaDeckCamera : public HaDeckWidget {
   bool jpeg_fresh_{false};
   uint32_t jpeg_received_{0};
   uint32_t jpeg_overwritten_{0};
+  uint32_t jpeg_bytes_{0};
+  uint32_t jpeg_max_size_{0};
   std::mutex jpeg_mutex_{};
   std::condition_variable jpeg_cv_{};
 
